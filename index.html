@@ -1153,6 +1153,10 @@ i.fa-whatsapp{
           <i class="fas fa-cogs icon-glow-cyan w-6 text-center"></i>
           <span>Paramètres</span>
         </button>
+        <button onclick="neyaCheckUpdate()" class="neu-sidebar-item" id="nav-maj" title="Chercher les mises à jour">
+          <i class="fas fa-sync-alt w-6 text-center" style="color:#16a34a;filter:drop-shadow(0 0 5px rgba(22,163,74,0.6));"></i>
+          <span>Actualiser</span>
+        </button>
       </nav>
     </aside>
 
@@ -3074,6 +3078,21 @@ function applyPosterEdit(){
   const pc=document.getElementById('posterCountry'); if(pc) pc.textContent=document.getElementById('peCountry').value.toUpperCase();
   const pn=document.getElementById('posterNumber'); if(pn) pn.textContent=document.getElementById('peNumber').value;
   closePosterEdit();
+}
+function neyaCheckUpdate(){
+  const btn=document.getElementById('nav-maj');
+  const ico=btn?btn.querySelector('i'):null;
+  if(ico){ ico.classList.add('fa-spin'); }
+  const done=(msg)=>{ if(ico) ico.classList.remove('fa-spin'); if(msg) alert(msg); };
+  // Dans l'application installée (Electron) : le moteur télécharge la dernière version puis recharge
+  if(window.neyaUpdate && window.neyaUpdate.check){
+    window.neyaUpdate.check()
+      .then(updated=>{ if(updated){ /* la fenêtre se recharge toute seule */ } else { done('✅ Vous avez déjà la dernière version.'); } })
+      .catch(()=>{ done(); location.reload(); });
+  } else {
+    // Version navigateur / web : simple rechargement (sans cache)
+    done(); location.reload(true);
+  }
 }
 function printReceipt(){window.print();}
 function generateReceiptFromModal(){const type=document.getElementById('wellModal').dataset.itemType||'well',col=type==='well'?wells:trees,item=col.find(w=>w.id===currentId);if(item)showReceipt(item,type==='well'?'Puits':'Arbres');}
