@@ -1596,9 +1596,15 @@ i.fa-whatsapp{
       <!-- DONORS -->
       <div id="page-donors" class="page hidden">
         <div class="neu-card p-6">
-          <h2 class="text-2xl font-black mb-6 text-green-800 flex items-center gap-2">
-            <i class="fas fa-users icon-glow-purple"></i> Liste des Donateurs
-          </h2>
+          <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
+            <h2 class="text-2xl font-black text-green-800 flex items-center gap-2">
+              <i class="fas fa-users icon-glow-purple"></i> Liste des Donateurs
+            </h2>
+            <div>
+              <button onclick="document.getElementById('donorFileInput').click()" class="neu-btn-secondary" style="padding:9px 16px;font-size:.83rem;"><i class="fas fa-file-excel" style="margin-right:6px;color:#16a34a;"></i> Importer fichier (Excel/CSV)</button>
+              <input type="file" id="donorFileInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="importDonorsFile(this)">
+            </div>
+          </div>
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead>
@@ -4664,6 +4670,49 @@ function importContactRows(rows){
     const exists=contacts.some(x=>(phone&&x.phone===phone)||(x.name===contact.name&&x.type===contact.type));
     if(exists) continue;
     contacts.push(contact); added++;
+  }
+  return added;
+}
+// Import d'un fichier Excel/CSV de donateurs (page Donateurs)
+function importDonorsFile(input){
+  const file=input.files&&input.files[0]; if(!file) return;
+  if(typeof XLSX==='undefined'){ alert('Lecture Excel indisponible (vérifiez la connexion internet).'); input.value=''; return; }
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      const n=importDonorRows(rows);
+      saveData(); if(typeof updateDonorsTable==='function')updateDonorsTable(); if(typeof updateDashboard==='function'){try{updateDashboard();}catch(e){}}
+      alert(n>0?('✅ '+n+' donateur(s) importé(s).'):'Aucun nouveau donateur (déjà présents ou fichier vide).');
+    }catch(err){ alert('Erreur de lecture : '+err.message); }
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+function importDonorRows(rows){
+  if(!rows || rows.length<2) return 0;
+  const header=rows[0].map(h=>String(h||'').toLowerCase().trim());
+  const col=(...keys)=>header.findIndex(h=>keys.some(k=>h.includes(k)));
+  const iPrenom=header.findIndex(h=>h.includes('prénom')||h.includes('prenom'));
+  const iNom=header.findIndex(h=>h.includes('nom') && !(h.includes('prénom')||h.includes('prenom')));
+  const iTel=col('tél','tel','phone','portable','mobile');
+  const iEmail=col('mail','e-mail','courriel');
+  const iVille=col('ville');
+  const iPays=col('pays','country');
+  const iTotal=col('total','montant','somme','don');
+  const iDate=col('date','dernier');
+  let added=0;
+  for(let r=1;r<rows.length;r++){
+    const c=rows[r]||[]; const g=i=>(i>=0&&c[i]!=null)?String(c[i]).trim():'';
+    const fn=g(iPrenom), ln=g(iNom), phone=g(iTel);
+    if(!fn && !ln && !phone) continue;
+    const totalNum=parseFloat((g(iTotal)||'').replace(/[^\d.,]/g,'').replace(',','.'))||0;
+    const donor={ id:Date.now()+Math.floor(Math.random()*100000), firstName:fn, lastName:ln, phone, email:g(iEmail), wells:0, trees:0, total:totalNum, lastDate:g(iDate), city:g(iVille), countryFR:g(iPays), type:'Particulier' };
+    const exists=donors.some(d=>(phone&&d.phone===phone)||(fn&&ln&&(d.firstName||'')===fn&&(d.lastName||'')===ln));
+    if(exists) continue;
+    donors.push(donor); added++;
   }
   return added;
 }
