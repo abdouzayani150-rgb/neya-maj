@@ -2119,7 +2119,7 @@ i.fa-whatsapp{
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
       <input type="text" id="contactSearch" class="neu-input" style="width:190px;padding:8px 14px;font-size:.83rem;" placeholder="🔍 Rechercher..." oninput="updateContactsTable()">
-      <select id="contactFilter" class="neu-input" style="width:150px;padding:8px 12px;font-size:.83rem;" onchange="updateContactsTable()">
+      <select id="contactFilter" class="neu-input" style="display:none;" onchange="updateContactsTable()">
         <option value="">Tous les types</option>
         <option>Donateur</option>
         <option>Adhérent</option>
@@ -2133,6 +2133,15 @@ i.fa-whatsapp{
       <input type="file" id="contactFileInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="importContactsFile(this)">
       <button onclick="openContactModal()" class="neu-btn" style="padding:9px 18px;font-size:.85rem;"><i class="fas fa-plus" style="margin-right:6px;"></i> Nouveau contact</button>
     </div>
+  </div>
+  <div id="contactTabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+    <button class="ctab" data-type="" onclick="contactTab('')" style="border:none;cursor:pointer;font-weight:700;font-size:.83rem;padding:8px 16px;border-radius:12px;background:linear-gradient(135deg,#e11d48,#9f1239);color:#fff;box-shadow:3px 3px 6px var(--shadow-dark),-3px -3px 6px var(--shadow-light);">Tous <span class="ctab-c" style="opacity:.75;">0</span></button>
+    <button class="ctab" data-type="Donateur" onclick="contactTab('Donateur')" style="border:none;cursor:pointer;font-weight:700;font-size:.83rem;padding:8px 16px;border-radius:12px;background:var(--bg);color:var(--text-light);box-shadow:3px 3px 6px var(--shadow-dark),-3px -3px 6px var(--shadow-light);">Donateurs <span class="ctab-c" style="opacity:.75;">0</span></button>
+    <button class="ctab" data-type="Adhérent" onclick="contactTab('Adhérent')" style="border:none;cursor:pointer;font-weight:700;font-size:.83rem;padding:8px 16px;border-radius:12px;background:var(--bg);color:var(--text-light);box-shadow:3px 3px 6px var(--shadow-dark),-3px -3px 6px var(--shadow-light);">Adhérents <span class="ctab-c" style="opacity:.75;">0</span></button>
+    <button class="ctab" data-type="Bénévole" onclick="contactTab('Bénévole')" style="border:none;cursor:pointer;font-weight:700;font-size:.83rem;padding:8px 16px;border-radius:12px;background:var(--bg);color:var(--text-light);box-shadow:3px 3px 6px var(--shadow-dark),-3px -3px 6px var(--shadow-light);">Bénévoles <span class="ctab-c" style="opacity:.75;">0</span></button>
+    <button class="ctab" data-type="Partenaire" onclick="contactTab('Partenaire')" style="border:none;cursor:pointer;font-weight:700;font-size:.83rem;padding:8px 16px;border-radius:12px;background:var(--bg);color:var(--text-light);box-shadow:3px 3px 6px var(--shadow-dark),-3px -3px 6px var(--shadow-light);">Partenaires <span class="ctab-c" style="opacity:.75;">0</span></button>
+    <button class="ctab" data-type="Fournisseur" onclick="contactTab('Fournisseur')" style="border:none;cursor:pointer;font-weight:700;font-size:.83rem;padding:8px 16px;border-radius:12px;background:var(--bg);color:var(--text-light);box-shadow:3px 3px 6px var(--shadow-dark),-3px -3px 6px var(--shadow-light);">Fournisseurs <span class="ctab-c" style="opacity:.75;">0</span></button>
+    <button class="ctab" data-type="Autre" onclick="contactTab('Autre')" style="border:none;cursor:pointer;font-weight:700;font-size:.83rem;padding:8px 16px;border-radius:12px;background:var(--bg);color:var(--text-light);box-shadow:3px 3px 6px var(--shadow-dark),-3px -3px 6px var(--shadow-light);">Autres <span class="ctab-c" style="opacity:.75;">0</span></button>
   </div>
   <div class="neu-flat" style="overflow:hidden;">
     <div style="overflow-x:auto;">
@@ -4783,9 +4792,25 @@ function contactMail(id){
   const c=contacts.find(x=>x.id===id); if(!c||!c.email){ alert('Pas d\'email.'); return; }
   window.location.href='mailto:'+c.email;
 }
+function contactTab(type){
+  const sel=document.getElementById('contactFilter'); if(sel) sel.value=type;
+  updateContactsTable();
+}
+function updateContactTabs(){
+  const ft=document.getElementById('contactFilter')?.value||'';
+  document.querySelectorAll('#contactTabs .ctab').forEach(b=>{
+    const t=b.getAttribute('data-type');
+    const cnt=t?contacts.filter(c=>(c.type||'')===t).length:contacts.length;
+    const cspan=b.querySelector('.ctab-c'); if(cspan) cspan.textContent=cnt;
+    const on=(t===ft);
+    b.style.background=on?'linear-gradient(135deg,#e11d48,#9f1239)':'var(--bg)';
+    b.style.color=on?'#fff':'var(--text-light)';
+  });
+}
 function updateContactsTable(){
   const q=(document.getElementById('contactSearch')?.value||'').toLowerCase();
   const ft=document.getElementById('contactFilter')?.value||'';
+  updateContactTabs();
   const list=contacts.filter(c=>{
     if(ft && c.type!==ft) return false;
     if(!q) return true;
