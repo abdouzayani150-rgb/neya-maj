@@ -4794,7 +4794,7 @@ function updateContactsTable(){
   document.getElementById('contactsCount').textContent=contacts.length+' contact(s)';
   const typeStyle={ 'Donateur':'background:#dcfce7;color:#166534;','Adhérent':'background:#dbeafe;color:#1e40af;','Bénévole':'background:#fef3c7;color:#92400e;','Partenaire':'background:#f3e8ff;color:#6b21a8;','Fournisseur':'background:#ffe4e6;color:#9f1239;','Autre':'background:#e5e7eb;color:#374151;' };
   const tb=document.getElementById('contactsTableBody');
-  if(!list.length){ tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:44px;color:var(--text-light);">Aucun contact — « Nouveau contact » ou « Importer donateurs »</td></tr>'; return; }
+  if(!list.length){ const msg = contacts.length>0 ? ('👉 '+contacts.length+' contact(s) existent mais sont masqués par le filtre/la recherche. Remettez le menu déroulant sur « Tous les types » et videz la recherche.') : 'Aucun contact — « Nouveau contact » ou « Importer donateurs »'; tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:44px;color:var(--text-light);font-weight:600;">'+msg+'</td></tr>'; return; }
   tb.innerHTML=list.map(c=>{
     const flag=(typeof neyaPhoneFlag==='function')?neyaPhoneFlag(c.phone):'';
     const flagImg=flag?('<img src="'+flag+'" style="width:18px;height:13px;border-radius:2px;object-fit:cover;margin-right:5px;vertical-align:middle;">'):'';
