@@ -2131,6 +2131,7 @@ i.fa-whatsapp{
       <button onclick="importDonorsAsContacts()" class="neu-btn-secondary" style="padding:9px 16px;font-size:.83rem;"><i class="fas fa-file-import" style="margin-right:6px;"></i> Importer donateurs</button>
       <button onclick="document.getElementById('contactFileInput').click()" class="neu-btn-secondary" style="padding:9px 16px;font-size:.83rem;"><i class="fas fa-file-excel" style="margin-right:6px;color:#16a34a;"></i> Importer fichier (Excel/CSV)</button>
       <input type="file" id="contactFileInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="importContactsFile(this)">
+      <button onclick="reclassifyContacts()" class="neu-btn-secondary" style="padding:9px 16px;font-size:.83rem;"><i class="fas fa-tags" style="margin-right:6px;color:#7c3aed;"></i> Changer le type (lot)</button>
       <button onclick="openContactModal()" class="neu-btn" style="padding:9px 18px;font-size:.85rem;"><i class="fas fa-plus" style="margin-right:6px;"></i> Nouveau contact</button>
     </div>
   </div>
@@ -4649,36 +4650,49 @@ function importContactsFile(input){
       const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
       const ws=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-      const n=importContactRows(rows);
-      contactsPersist(); updateContactsTable();
-      alert(n>0?('✅ '+n+' contact(s) importé(s).'):'Aucun nouveau contact (déjà présents ou fichier vide).');
+      let type=prompt('Ces contacts sont de quel TYPE ?\n\nTapez : Donateur, Adhérent, Bénévole, Partenaire, Fournisseur ou Autre','Donateur');
+      if(type===null){ input.value=''; return; }
+      const valid=['Donateur','Adhérent','Bénévole','Partenaire','Fournisseur','Autre'];
+      type=valid.find(v=>v.toLowerCase()===String(type).trim().toLowerCase())||'Autre';
+      const n=importContactRows(rows, type);
+      contactsPersist();
+      const sel=document.getElementById('contactFilter'); if(sel) sel.value=type;
+      updateContactsTable();
+      alert(n>0?('✅ '+n+' contact(s) importé(s) comme « '+type+' ».'):'Aucun nouveau contact (déjà présents, ou colonnes non reconnues).');
     }catch(err){ alert('Erreur de lecture : '+err.message); }
     input.value='';
   };
   reader.readAsArrayBuffer(file);
 }
-function importContactRows(rows){
+function importContactRows(rows, forceType){
   if(!rows || rows.length<2) return 0;
   const header=rows[0].map(h=>String(h||'').toLowerCase().trim());
+  const data=rows.slice(1).filter(r=>r && r.some(x=>String(x||'').trim()!==''));
+  const ncol=Math.max(0,...rows.map(r=>r.length));
+  const looksPhone=v=>{ const s=String(v||'').replace(/[\s.\-()]/g,''); return /^\+?\d{8,}$/.test(s); };
   const col=(...keys)=>header.findIndex(h=>keys.some(k=>h.includes(k)));
-  const iPrenom=header.findIndex(h=>h.includes('prénom')||h.includes('prenom'));
-  const iNom=header.findIndex(h=>h.includes('nom') && !(h.includes('prénom')||h.includes('prenom')));
-  const iTel=col('tél','tel','phone','portable','mobile');
-  const iEmail=col('mail','e-mail','courriel');
-  const iAge=col('âge','age');
-  const iAdr=col('adresse','postal','ville');
+  let iPrenom=header.findIndex(h=>h.includes('prénom')||h.includes('prenom'));
+  let iNom=header.findIndex(h=>h.includes('nom') && !(h.includes('prénom')||h.includes('prenom')));
+  let iTel=col('tél','tel','phone','portable','mobile');
+  let iEmail=col('mail','e-mail','courriel');
+  let iAge=col('âge','age');
+  let iAdr=col('adresse','postal','ville');
   const iDepuis=header.findIndex(h=>h.includes('depuis') && !h.includes('plus'));
-  const iFin=header.findIndex(h=>(h.includes('plus') && h.includes('bénévole'))||(h.includes('plus')&&h.includes('benevole'))||h.includes('fin'));
-  const benevole=header.some(h=>h.includes('bénévole')||h.includes('benevole'));
+  const iFin=header.findIndex(h=>(h.includes('plus') && (h.includes('bénévole')||h.includes('benevole')))||h.includes('fin'));
+  // Heuristique si en-têtes non reconnus (colonnes « Colonne1 » etc.)
+  if(iTel<0){ let best=-1,bs=0; for(let cc=0;cc<ncol;cc++){ let sc=0; data.forEach(r=>{ if(looksPhone(r[cc]))sc++; }); if(sc>bs){bs=sc;best=cc;} } if(bs>0) iTel=best; }
+  if(iNom<0 && iPrenom<0){ for(let cc=0;cc<ncol;cc++){ if(cc===iTel)continue; const txt=data.filter(r=>{const v=String(r[cc]||'').trim(); return v && !looksPhone(v) && /[a-zA-ZàâäéèêëïîôöùûüçÀÂ]/.test(v);}).length; if(txt>=Math.max(1,data.length*0.4)){ iNom=cc; break; } } }
   let added=0;
   for(let r=1;r<rows.length;r++){
-    const c=rows[r]||[]; const g=i=>(i>=0 && c[i]!=null)?String(c[i]).trim():'';
-    const name=[g(iPrenom),g(iNom)].filter(Boolean).join(' ').trim();
+    const c=rows[r]||[]; if(!c.some(x=>String(x||'').trim()!=='')) continue;
+    const g=i=>(i>=0 && c[i]!=null)?String(c[i]).trim():'';
+    let name=[g(iPrenom),g(iNom)].filter(Boolean).join(' ').trim();
+    name=name.replace(/^\s*\d+\s*[\)\.\-]\s*/,''); // enlève "1) " en début de nom
     const phone=g(iTel);
     if(!name && !phone) continue;
     const notes=[]; if(g(iAge))notes.push('Âge: '+g(iAge)); if(g(iDepuis))notes.push('Depuis: '+g(iDepuis)); if(g(iFin))notes.push('Fin: '+g(iFin));
-    const contact={ id:Date.now()+Math.floor(Math.random()*100000), name:name||phone, type:benevole?'Bénévole':'Autre', phone, email:g(iEmail), city:g(iAdr), country:'', org:'', notes:notes.join(' | ') };
-    const exists=contacts.some(x=>(phone&&x.phone===phone)||(x.name===contact.name&&x.type===contact.type));
+    const contact={ id:Date.now()+Math.floor(Math.random()*100000), name:name||phone, type:forceType||'Autre', phone, email:g(iEmail), city:g(iAdr), country:'', org:'', notes:notes.join(' | ') };
+    const exists=contacts.some(x=>(phone&&x.phone===phone && x.type===contact.type)||(x.name===contact.name&&x.type===contact.type));
     if(exists) continue;
     contacts.push(contact); added++;
   }
@@ -4795,6 +4809,23 @@ function contactMail(id){
 function contactTab(type){
   const sel=document.getElementById('contactFilter'); if(sel) sel.value=type;
   updateContactsTable();
+}
+function reclassifyContacts(){
+  const ft=document.getElementById('contactFilter')?.value||'';
+  const q=(document.getElementById('contactSearch')?.value||'').toLowerCase();
+  const list=contacts.filter(c=>{ if(ft && (c.type||'')!==ft) return false; if(!q) return true; return [c.name,c.phone,c.email].some(v=>(v||'').toLowerCase().includes(q)); });
+  if(!list.length){ alert('Aucun contact dans la vue actuelle.'); return; }
+  let t=prompt('Reclasser les '+list.length+' contact(s) affiché(s) en quel type ?\n\nTapez : Donateur, Adhérent, Bénévole, Partenaire, Fournisseur ou Autre','Donateur');
+  if(t===null) return;
+  const valid=['Donateur','Adhérent','Bénévole','Partenaire','Fournisseur','Autre'];
+  const target=valid.find(v=>v.toLowerCase()===String(t).trim().toLowerCase());
+  if(!target){ alert('Type invalide.'); return; }
+  const ids=new Set(list.map(c=>c.id));
+  contacts.forEach(c=>{ if(ids.has(c.id)) c.type=target; });
+  contactsPersist();
+  const sel=document.getElementById('contactFilter'); if(sel) sel.value=target;
+  updateContactsTable();
+  alert('✅ '+list.length+' contact(s) reclassés en « '+target+' ».');
 }
 function updateContactTabs(){
   const ft=document.getElementById('contactFilter')?.value||'';
