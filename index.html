@@ -4725,10 +4725,12 @@ function importDonationsFile(input){
       const r=importDonationRows(rows);
       saveData();
       ['tableauSyncNeyaDonations','updateWellsTable','updateDonorsTable','updateDashboard'].forEach(fn=>{ if(typeof window[fn]==='function'){try{window[fn]();}catch(e){}} });
-      let msg = r.added>0 ? ('✅ '+r.added+' don(s) importé(s) (visibles dans Tableau dons, Liste des Puits, Donateurs).') : 'Aucun nouveau don (déjà présents ou fichier vide).';
-      if(!r.iDonorFound) msg += "\n\n⚠️ La colonne « Nom du donateur » n'a pas été reconnue dans l'en-tête : les noms ont été devinés automatiquement. Vérifiez la Liste des Puits.";
-      else if(r.skippedNoDonor>0) msg += '\n\n⚠️ '+r.skippedNoDonor+' ligne(s) importée(s) sans nom de donateur détecté (vérifiez ces lignes).';
-      alert(msg);
+      let msg = (r.added>0||r.repaired>0) ? '' : 'Aucun changement (fichier vide ou déjà à jour).';
+      if(r.added>0) msg += '✅ '+r.added+' nouveau(x) don(s) importé(s).\n';
+      if(r.repaired>0) msg += '🔧 '+r.repaired+' ligne(s) déjà existante(s) complétée(s) (ex: nom du donateur manquant).\n';
+      if(!r.iDonorFound) msg += "\n⚠️ La colonne « Nom du donateur » n'a pas été reconnue dans l'en-tête : les noms ont été devinés automatiquement. Vérifiez la Liste des Puits.";
+      else if(r.skippedNoDonor>0) msg += '\n⚠️ '+r.skippedNoDonor+' ligne(s) sans nom de donateur détecté.';
+      alert(msg.trim());
     }catch(err){ alert('Erreur de lecture : '+err.message); }
     input.value='';
   };
@@ -4785,7 +4787,7 @@ function importDonationRows(rows){
   const fmtDate=v=>{ if(v==null||v==='')return ''; if(v instanceof Date){ const z=n=>String(n).padStart(2,'0'); return v.getFullYear()+'-'+z(v.getMonth()+1)+'-'+z(v.getDate()); } const s=String(v).trim(); const m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/); if(m){ let y=m[3]; if(y.length===2)y='20'+y; return y+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'); } return s; };
   const mapStat=s=>{ s=(s||'').toLowerCase(); if(s.includes('décéd')||s.includes('deced'))return'Décédé'; if(s.includes('malad'))return'Malade'; if(s.includes('vivant')||s.includes('bonne')||s.includes('santé'))return'Bonne santé'; return (s? (s.charAt(0).toUpperCase()+s.slice(1)) : 'Bonne santé'); };
   const mapPay=p=>{ const x=(p||'').toLowerCase(); if(x.includes('hello'))return'HelloAsso'; if(x.includes('esp'))return'Espèces'; if(x.includes('vir'))return'Virement'; if(x.includes('paypal'))return'PayPal'; if(x.includes('chèq')||x.includes('cheq'))return'Chèque'; if(x.includes('cagn'))return'Cagnotte'; if(x.includes('carte')||x.includes('cb'))return'Carte bancaire'; return p||''; };
-  let added=0, skippedNoDonor=0;
+  let added=0, skippedNoDonor=0, repaired=0;
   for(let r=headerIdx+1;r<rows.length;r++){
     const c=rows[r]||[]; const g=i=>(i>=0&&c[i]!=null)?String(c[i]).trim():'';
     let donor=g(iDonor); const phone=g(iTel); const benef=g(iBenef);
@@ -4795,7 +4797,17 @@ function importDonationRows(rows){
     const amount=parseFloat((g(iSom)||'').replace(/[^\d.,]/g,'').replace(',','.'))||0;
     const date=fmtDate(c[iDate]);
     const item={ id:Date.now()+Math.floor(Math.random()*100000), wellNumber:num||('IMP-'+(added+1)), donorFirstName:donor, donorLastName:'', donorPhone:phone, donorEmail:'', beneficiaryName:benef, country:'', beneficiariesCount:'', beneficiaryStatus:mapStat(g(iStat)), beneficiaryGender:g(iHF), amount:amount, paymentMethod:mapPay(g(iPay)), visibility:(g(iVis).toLowerCase().includes('anonyme')?'Anonyme':'Public'), status:'Nouveau', notes:g(iCom), date:date, files:[], treeQty:0, donationType:'well' };
-    if(num && wells.some(w=>String(w.wellNumber)===String(num))) continue; // évite doublon par n° puits
+    const existingIdx=num?wells.findIndex(w=>String(w.wellNumber)===String(num)):-1;
+    if(existingIdx>=0){
+      // Le puits existe déjà (import précédent) : on complète seulement les champs restés vides,
+      // sans écraser des données déjà correctes ou modifiées manuellement.
+      const ex=wells[existingIdx]; let filled=false;
+      if(!ex.donorFirstName && donor){ ex.donorFirstName=donor; filled=true; }
+      if(!ex.donorPhone && phone){ ex.donorPhone=phone; filled=true; }
+      if(!ex.beneficiaryName && benef){ ex.beneficiaryName=benef; filled=true; }
+      if(filled) repaired++;
+      continue;
+    }
     wells.push(item);
     // upsert donateur
     const di=donors.findIndex(d=>phone && d.phone===phone);
@@ -4803,7 +4815,7 @@ function importDonationRows(rows){
     else { donors.push({ id:Date.now()+Math.floor(Math.random()*100000), firstName:donor, lastName:'', phone:phone, email:'', wells:1, trees:0, total:amount, lastDate:date, city:'', countryFR:'', type:'Particulier' }); }
     added++;
   }
-  return {added, skippedNoDonor, iDonorFound:(iDonor>=0)};
+  return {added, skippedNoDonor, iDonorFound:(iDonor>=0), repaired};
 }
 // Import d'un fichier Excel/CSV de donateurs (page Donateurs)
 function importDonorsFile(input){
