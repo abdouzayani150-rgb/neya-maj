@@ -4861,7 +4861,14 @@ function updateContactTabs(){
     b.style.color=on?'#fff':'var(--text-light)';
   });
 }
+function neyaEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+let _contactSearchTimer=null;
 function updateContactsTable(){
+  clearTimeout(_contactSearchTimer);
+  _contactSearchTimer=setTimeout(_renderContactsTable, 120);
+}
+function _renderContactsTable(){
+  try{
   const q=(document.getElementById('contactSearch')?.value||'').toLowerCase();
   const ft=document.getElementById('contactFilter')?.value||'';
   updateContactTabs();
@@ -4870,7 +4877,7 @@ function updateContactsTable(){
     if(!q) return true;
     return [c.name,c.phone,c.email,c.city,c.country,c.org].some(v=>(v||'').toLowerCase().includes(q));
   }).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  document.getElementById('contactsCount').textContent=contacts.length+' contact(s)';
+  document.getElementById('contactsCount').textContent=contacts.length+' contact(s)'+(q||ft?(' — '+list.length+' affiché(s)'):'');
   const typeStyle={ 'Donateur':'background:#dcfce7;color:#166534;','Adhérent':'background:#dbeafe;color:#1e40af;','Bénévole':'background:#fef3c7;color:#92400e;','Partenaire':'background:#f3e8ff;color:#6b21a8;','Fournisseur':'background:#ffe4e6;color:#9f1239;','Autre':'background:#e5e7eb;color:#374151;' };
   const tb=document.getElementById('contactsTableBody');
   if(!list.length){ const msg = contacts.length>0 ? ('👉 '+contacts.length+' contact(s) existent mais sont masqués par le filtre/la recherche. Remettez le menu déroulant sur « Tous les types » et videz la recherche.') : 'Aucun contact — « Nouveau contact » ou « Importer donateurs »'; tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:44px;color:var(--text-light);font-weight:600;">'+msg+'</td></tr>'; return; }
@@ -4878,12 +4885,12 @@ function updateContactsTable(){
     const flag=(typeof neyaPhoneFlag==='function')?neyaPhoneFlag(c.phone):'';
     const flagImg=flag?('<img src="'+flag+'" style="width:18px;height:13px;border-radius:2px;object-fit:cover;margin-right:5px;vertical-align:middle;">'):'';
     return `<tr style="border-bottom:1px solid #fde2e7;" onmouseover="this.style.background='#fff1f3'" onmouseout="this.style.background=''">
-      <td style="padding:10px 13px;font-weight:700;font-size:.84rem;">${c.name||'—'}</td>
-      <td style="padding:10px 13px;"><span style="padding:3px 10px;border-radius:12px;font-size:.7rem;font-weight:700;${typeStyle[c.type]||typeStyle['Autre']}">${c.type||'Autre'}</span></td>
-      <td style="padding:10px 13px;font-size:.82rem;white-space:nowrap;">${flagImg}${c.phone||''}</td>
-      <td style="padding:10px 13px;font-size:.81rem;">${c.email||''}</td>
-      <td style="padding:10px 13px;font-size:.82rem;">${[c.city,c.country].filter(Boolean).join(', ')}</td>
-      <td style="padding:10px 13px;font-size:.82rem;">${c.org||''}</td>
+      <td style="padding:10px 13px;font-weight:700;font-size:.84rem;">${neyaEsc(c.name)||'—'}</td>
+      <td style="padding:10px 13px;"><span style="padding:3px 10px;border-radius:12px;font-size:.7rem;font-weight:700;${typeStyle[c.type]||typeStyle['Autre']}">${neyaEsc(c.type)||'Autre'}</span></td>
+      <td style="padding:10px 13px;font-size:.82rem;white-space:nowrap;">${flagImg}${neyaEsc(c.phone)}</td>
+      <td style="padding:10px 13px;font-size:.81rem;">${neyaEsc(c.email)}</td>
+      <td style="padding:10px 13px;font-size:.82rem;">${neyaEsc([c.city,c.country].filter(Boolean).join(', '))}</td>
+      <td style="padding:10px 13px;font-size:.82rem;">${neyaEsc(c.org)}</td>
       <td style="padding:10px 13px;text-align:center;white-space:nowrap;">
         ${c.phone?`<button onclick="contactWhats(${c.id})" title="WhatsApp" style="background:#25d366;color:#fff;border:none;border-radius:7px;padding:4px 8px;font-size:.72rem;cursor:pointer;margin-right:3px;"><i class="fab fa-whatsapp"></i></button>`:''}
         ${c.email?`<button onclick="contactMail(${c.id})" title="Email" style="background:#0ea5e9;color:#fff;border:none;border-radius:7px;padding:4px 8px;font-size:.72rem;cursor:pointer;margin-right:3px;"><i class="fas fa-envelope"></i></button>`:''}
@@ -4892,6 +4899,11 @@ function updateContactsTable(){
       </td>
     </tr>`;
   }).join('');
+  }catch(e){
+    const tb=document.getElementById('contactsTableBody');
+    if(tb) tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:44px;color:#c62828;font-weight:600;">⚠️ Erreur d\'affichage : '+neyaEsc(e.message)+'<br><span style="font-weight:400;font-size:.8rem;">Cliquez « Actualiser » ou contactez le support avec ce message.</span></td></tr>';
+    if(typeof console!=='undefined') console.error('updateContactsTable error:', e);
+  }
 }
 
 // ─── CONGÉS PAYÉS ────────────────────────────────────────────────────────────
