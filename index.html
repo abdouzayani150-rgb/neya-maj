@@ -4722,10 +4722,13 @@ function importDonationsFile(input){
       const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});
       const ws=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-      const n=importDonationRows(rows);
+      const r=importDonationRows(rows);
       saveData();
       ['tableauSyncNeyaDonations','updateWellsTable','updateDonorsTable','updateDashboard'].forEach(fn=>{ if(typeof window[fn]==='function'){try{window[fn]();}catch(e){}} });
-      alert(n>0?('✅ '+n+' don(s) importé(s) (visibles dans Tableau dons, Liste des Puits, Donateurs).'):'Aucun nouveau don (déjà présents ou fichier vide).');
+      let msg = r.added>0 ? ('✅ '+r.added+' don(s) importé(s) (visibles dans Tableau dons, Liste des Puits, Donateurs).') : 'Aucun nouveau don (déjà présents ou fichier vide).';
+      if(!r.iDonorFound) msg += "\n\n⚠️ La colonne « Nom du donateur » n'a pas été reconnue dans l'en-tête : les noms ont été devinés automatiquement. Vérifiez la Liste des Puits.";
+      else if(r.skippedNoDonor>0) msg += '\n\n⚠️ '+r.skippedNoDonor+' ligne(s) importée(s) sans nom de donateur détecté (vérifiez ces lignes).';
+      alert(msg);
     }catch(err){ alert('Erreur de lecture : '+err.message); }
     input.value='';
   };
@@ -4733,27 +4736,61 @@ function importDonationsFile(input){
 }
 function importDonationRows(rows){
   if(!rows || rows.length<2) return 0;
-  const H=rows[0].map(h=>String(h||'').toLowerCase().trim());
-  const find=(...keys)=>H.findIndex(h=>keys.some(k=>h.includes(k)));
-  const iDonor=find('donateur');
-  const iNum=find('puits','parrainage','arbres','sacrifice','repas');
-  const iDate=find('date du don','date');
-  const iSom=find('somme','montant');
-  const iTel=find('téléphone','telephone','tel');
-  const iBenef=find('bénéficiaire','beneficiaire','aumône','aumone','bénéficiere');
-  const iStat=find('statut');
-  const iHF=find('h/f','hf');
-  const iVis=find('anonyme','public','visib');
-  const iPay=find('paiement','mode');
-  const iCom=find('commentaire','remarque');
+  // Trouve la vraie ligne d'en-tête parmi les 5 premières (au cas où elle n'est pas en tête,
+  // ex: fichier collé sans la ligne de titres, ou lignes vides au-dessus)
+  const KEYWORDS=['donateur','puits','parrainage','arbres','sacrifice','repas','date','somme','montant','téléphone','telephone','bénéficiaire','beneficiaire','aumône','aumone','statut','h/f','anonyme','public','paiement','commentaire'];
+  let headerIdx=0, bestScore=-1;
+  for(let i=0;i<Math.min(5,rows.length-1);i++){
+    const cells=(rows[i]||[]).map(h=>String(h||'').toLowerCase().trim());
+    const score=cells.reduce((s,h)=>s+(KEYWORDS.some(k=>h.includes(k))?1:0),0);
+    if(score>bestScore){ bestScore=score; headerIdx=i; }
+  }
+  let iDonor,iNum,iDate,iSom,iTel,iBenef,iStat,iHF,iVis,iPay,iCom;
+  if(bestScore<4){
+    // Moins de 4 indices d'en-tête trouvés : ce n'est pas un vrai en-tête (peut-être juste
+    // un mot du genre "public"/"arbres" présent dans une donnée). On suppose l'ordre
+    // standard du modèle NEYA (Donateur, N°, Date, Somme, Tél, Bénéficiaire, Statut, H/F, Anonyme, Paiement)
+    // et on traite TOUTES les lignes comme des données (pas de ligne perdue).
+    headerIdx=-1;
+    iDonor=0; iNum=1; iDate=2; iSom=3; iTel=4; iBenef=5; iStat=6; iHF=7; iVis=8; iPay=9; iCom=-1;
+  } else {
+    const H=(rows[headerIdx]||[]).map(h=>String(h||'').toLowerCase().trim());
+    const find=(...keys)=>H.findIndex(h=>keys.some(k=>h.includes(k)));
+    iDonor=find('donateur');
+    iNum=find('puits','parrainage','arbres','sacrifice','repas');
+    iDate=find('date du don','date');
+    iSom=find('somme','montant');
+    iTel=find('téléphone','telephone','tel');
+    iBenef=find('bénéficiaire','beneficiaire','aumône','aumone','bénéficiere');
+    iStat=find('statut');
+    iHF=find('h/f','hf');
+    iVis=find('anonyme','public','visib');
+    iPay=find('paiement','mode');
+    iCom=find('commentaire','remarque');
+    // Repli : en-tête trouvé mais colonne donateur non reconnue -> deviner la 1ère colonne
+    // pleine de texte, différente des colonnes déjà identifiées (téléphone, bénéficiaire, n°...)
+    if(iDonor<0){
+      const looksPhone=v=>/^\+?[\d\s.\-()]{8,}$/.test(String(v||'').trim());
+      const dataRows=rows.slice(headerIdx+1,headerIdx+1+Math.min(15,rows.length-headerIdx-1));
+      const ncol=Math.max(0,...rows.map(r=>r.length));
+      let best=-1,bs=0;
+      for(let cc=0;cc<ncol;cc++){
+        if(cc===iTel||cc===iBenef||cc===iNum||cc===iDate||cc===iSom) continue;
+        const txt=dataRows.filter(r=>{ const v=String((r||[])[cc]||'').trim(); return v && !looksPhone(v) && /[a-zA-ZàâäéèêëïîôöùûüçÀÂ]/.test(v); }).length;
+        if(txt>bs){ bs=txt; best=cc; }
+      }
+      if(best>=0 && bs>0) iDonor=best;
+    }
+  }
   const fmtDate=v=>{ if(v==null||v==='')return ''; if(v instanceof Date){ const z=n=>String(n).padStart(2,'0'); return v.getFullYear()+'-'+z(v.getMonth()+1)+'-'+z(v.getDate()); } const s=String(v).trim(); const m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/); if(m){ let y=m[3]; if(y.length===2)y='20'+y; return y+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'); } return s; };
   const mapStat=s=>{ s=(s||'').toLowerCase(); if(s.includes('décéd')||s.includes('deced'))return'Décédé'; if(s.includes('malad'))return'Malade'; if(s.includes('vivant')||s.includes('bonne')||s.includes('santé'))return'Bonne santé'; return (s? (s.charAt(0).toUpperCase()+s.slice(1)) : 'Bonne santé'); };
   const mapPay=p=>{ const x=(p||'').toLowerCase(); if(x.includes('hello'))return'HelloAsso'; if(x.includes('esp'))return'Espèces'; if(x.includes('vir'))return'Virement'; if(x.includes('paypal'))return'PayPal'; if(x.includes('chèq')||x.includes('cheq'))return'Chèque'; if(x.includes('cagn'))return'Cagnotte'; if(x.includes('carte')||x.includes('cb'))return'Carte bancaire'; return p||''; };
-  let added=0;
-  for(let r=1;r<rows.length;r++){
+  let added=0, skippedNoDonor=0;
+  for(let r=headerIdx+1;r<rows.length;r++){
     const c=rows[r]||[]; const g=i=>(i>=0&&c[i]!=null)?String(c[i]).trim():'';
-    const donor=g(iDonor); const phone=g(iTel); const benef=g(iBenef);
+    let donor=g(iDonor); const phone=g(iTel); const benef=g(iBenef);
     if(!donor && !phone && !benef) continue;
+    if(!donor) skippedNoDonor++;
     const num=g(iNum).replace(/^n°?\s*/i,'').trim();
     const amount=parseFloat((g(iSom)||'').replace(/[^\d.,]/g,'').replace(',','.'))||0;
     const date=fmtDate(c[iDate]);
@@ -4766,7 +4803,7 @@ function importDonationRows(rows){
     else { donors.push({ id:Date.now()+Math.floor(Math.random()*100000), firstName:donor, lastName:'', phone:phone, email:'', wells:1, trees:0, total:amount, lastDate:date, city:'', countryFR:'', type:'Particulier' }); }
     added++;
   }
-  return added;
+  return {added, skippedNoDonor, iDonorFound:(iDonor>=0)};
 }
 // Import d'un fichier Excel/CSV de donateurs (page Donateurs)
 function importDonorsFile(input){
