@@ -2380,6 +2380,22 @@ Un puits = une aumône continue (sadaqa jariya) ✨
   </div>
 </div>
 
+<!-- ═══ SÉLECTEUR DE TYPE ═══ -->
+<div id="typePickerModal" class="fixed inset-0 z-50 hidden bg-black/40 flex items-center justify-center p-4 backdrop-blur-sm">
+  <div class="neu-card w-full" style="max-width:380px;">
+    <h3 id="typePickerTitle" style="font-size:1.05rem;font-weight:900;color:#9f1239;margin:0 0 16px;">Choisir le type</h3>
+    <div style="display:flex;flex-direction:column;gap:9px;">
+      <button onclick="typePickerChoose('Donateur')" class="neu-btn" style="padding:11px;font-size:.9rem;">💶 Donateur</button>
+      <button onclick="typePickerChoose('Adhérent')" class="neu-btn-secondary" style="padding:11px;font-size:.9rem;">⭐ Adhérent</button>
+      <button onclick="typePickerChoose('Bénévole')" class="neu-btn-secondary" style="padding:11px;font-size:.9rem;">🙌 Bénévole</button>
+      <button onclick="typePickerChoose('Partenaire')" class="neu-btn-secondary" style="padding:11px;font-size:.9rem;">🤝 Partenaire</button>
+      <button onclick="typePickerChoose('Fournisseur')" class="neu-btn-secondary" style="padding:11px;font-size:.9rem;">📦 Fournisseur</button>
+      <button onclick="typePickerChoose('Autre')" class="neu-btn-secondary" style="padding:11px;font-size:.9rem;">📇 Autre</button>
+      <button onclick="typePickerCancel()" style="padding:9px;font-size:.85rem;background:none;border:none;color:var(--text-light);cursor:pointer;margin-top:4px;">Annuler</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ CONTACT MODAL ═══ -->
 <div id="contactModal" class="fixed inset-0 z-50 hidden bg-black/40 flex items-center justify-center p-4 backdrop-blur-sm">
   <div class="neu-card w-full" style="max-width:480px;max-height:90vh;overflow-y:auto;">
@@ -4650,15 +4666,13 @@ function importContactsFile(input){
       const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
       const ws=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-      let type=prompt('Ces contacts sont de quel TYPE ?\n\nTapez : Donateur, Adhérent, Bénévole, Partenaire, Fournisseur ou Autre','Donateur');
-      if(type===null){ input.value=''; return; }
-      const valid=['Donateur','Adhérent','Bénévole','Partenaire','Fournisseur','Autre'];
-      type=valid.find(v=>v.toLowerCase()===String(type).trim().toLowerCase())||'Autre';
-      const n=importContactRows(rows, type);
-      contactsPersist();
-      const sel=document.getElementById('contactFilter'); if(sel) sel.value=type;
-      updateContactsTable();
-      alert(n>0?('✅ '+n+' contact(s) importé(s) comme « '+type+' ».'):'Aucun nouveau contact (déjà présents, ou colonnes non reconnues).');
+      pickType('Quel TYPE pour ces contacts importés ?', function(type){
+        const n=importContactRows(rows, type);
+        contactsPersist();
+        const sel=document.getElementById('contactFilter'); if(sel) sel.value=type;
+        updateContactsTable();
+        alert(n>0?('✅ '+n+' contact(s) importé(s) comme « '+type+' ».'):'Aucun nouveau contact (déjà présents, ou colonnes non reconnues).');
+      });
     }catch(err){ alert('Erreur de lecture : '+err.message); }
     input.value='';
   };
@@ -4815,18 +4829,27 @@ function reclassifyContacts(){
   const q=(document.getElementById('contactSearch')?.value||'').toLowerCase();
   const list=contacts.filter(c=>{ if(ft && (c.type||'')!==ft) return false; if(!q) return true; return [c.name,c.phone,c.email].some(v=>(v||'').toLowerCase().includes(q)); });
   if(!list.length){ alert('Aucun contact dans la vue actuelle.'); return; }
-  let t=prompt('Reclasser les '+list.length+' contact(s) affiché(s) en quel type ?\n\nTapez : Donateur, Adhérent, Bénévole, Partenaire, Fournisseur ou Autre','Donateur');
-  if(t===null) return;
-  const valid=['Donateur','Adhérent','Bénévole','Partenaire','Fournisseur','Autre'];
-  const target=valid.find(v=>v.toLowerCase()===String(t).trim().toLowerCase());
-  if(!target){ alert('Type invalide.'); return; }
-  const ids=new Set(list.map(c=>c.id));
-  contacts.forEach(c=>{ if(ids.has(c.id)) c.type=target; });
-  contactsPersist();
-  const sel=document.getElementById('contactFilter'); if(sel) sel.value=target;
-  updateContactsTable();
-  alert('✅ '+list.length+' contact(s) reclassés en « '+target+' ».');
+  pickType('Reclasser les '+list.length+' contact(s) affiché(s) en :', function(target){
+    const ids=new Set(list.map(c=>c.id));
+    contacts.forEach(c=>{ if(ids.has(c.id)) c.type=target; });
+    contactsPersist();
+    const sel=document.getElementById('contactFilter'); if(sel) sel.value=target;
+    updateContactsTable();
+    alert('✅ '+list.length+' contact(s) reclassés en « '+target+' ».');
+  });
 }
+// Sélecteur de type (remplace prompt(), non supporté par Electron)
+let _typePickerCb=null;
+function pickType(titre, cb){
+  _typePickerCb=cb;
+  const t=document.getElementById('typePickerTitle'); if(t) t.textContent=titre||'Choisir le type';
+  document.getElementById('typePickerModal').classList.remove('hidden');
+}
+function typePickerChoose(type){
+  document.getElementById('typePickerModal').classList.add('hidden');
+  const cb=_typePickerCb; _typePickerCb=null; if(cb) cb(type);
+}
+function typePickerCancel(){ document.getElementById('typePickerModal').classList.add('hidden'); _typePickerCb=null; }
 function updateContactTabs(){
   const ft=document.getElementById('contactFilter')?.value||'';
   document.querySelectorAll('#contactTabs .ctab').forEach(b=>{
