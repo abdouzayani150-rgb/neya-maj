@@ -3376,8 +3376,9 @@ document.getElementById('loginForm').addEventListener('submit',login);document.g
     var countryData = {};
     all.forEach(function(w){ countryData[w.country] = (countryData[w.country] || 0) + 1; });
     var ctx1 = document.getElementById('countryChart').getContext('2d');
-    if(window.countryChart) window.countryChart.destroy();
-    window.countryChart = new Chart(ctx1, {
+    // NB: window.countryChart designerait le <canvas> (liaison implicite par id) -> on stocke l'instance a part
+    if(window.countryChartI && typeof window.countryChartI.destroy==='function') window.countryChartI.destroy();
+    window.countryChartI = new Chart(ctx1, {
       type:'bar',
       data:{labels:Object.keys(countryData),datasets:[{label:'Projets',data:Object.values(countryData),backgroundColor:['#2e7d32','#43a047','#66bb6a','#81c784','#a5d6a7','#c8e6c9','#4caf50'],borderRadius:12,borderSkipped:false}]},
       options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{display:false}},x:{grid:{display:false}}}}
@@ -3386,8 +3387,8 @@ document.getElementById('loginForm').addEventListener('submit',login);document.g
     var paymentData = {};
     all.forEach(function(w){ paymentData[w.paymentMethod] = (paymentData[w.paymentMethod] || 0) + 1; });
     var ctx2 = document.getElementById('paymentChart').getContext('2d');
-    if(window.paymentChart) window.paymentChart.destroy();
-    window.paymentChart = new Chart(ctx2, {
+    if(window.paymentChartI && typeof window.paymentChartI.destroy==='function') window.paymentChartI.destroy();
+    window.paymentChartI = new Chart(ctx2, {
       type:'doughnut',
       data:{labels:Object.keys(paymentData),datasets:[{data:Object.values(paymentData),backgroundColor:['#1565c0','#1976d2','#1e88e5','#42a5f5','#64b5f6','#90caf9'],borderWidth:0,hoverOffset:8}]},
       options:{responsive:true,plugins:{legend:{position:'right',labels:{padding:15,usePointStyle:true}}}}
@@ -3396,8 +3397,8 @@ document.getElementById('loginForm').addEventListener('submit',login);document.g
     var monthData = {};
     all.forEach(function(w){ var month = w.date.substring(0,7); monthData[month] = (monthData[month] || 0) + parseInt(w.amount); });
     var ctx3 = document.getElementById('monthlyChart').getContext('2d');
-    if(window.monthlyChart) window.monthlyChart.destroy();
-    window.monthlyChart = new Chart(ctx3, {
+    if(window.monthlyChartI && typeof window.monthlyChartI.destroy==='function') window.monthlyChartI.destroy();
+    window.monthlyChartI = new Chart(ctx3, {
       type:'line',
       data:{labels:Object.keys(monthData),datasets:[{label:'Dons (€)',data:Object.values(monthData),borderColor:'#2e7d32',backgroundColor:'rgba(46,125,50,0.15)',fill:true,tension:0.4,pointBackgroundColor:'#43a047',pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:5,pointHoverRadius:8}]},
       options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,0.05)'}},x:{grid:{display:false}}}}
