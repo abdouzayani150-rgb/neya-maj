@@ -449,6 +449,102 @@ body {
   letter-spacing: 2px;
 }
 
+.ai-workspace {
+  display: grid;
+  grid-template-columns: minmax(300px, 420px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.ai-panel {
+  background: rgba(241, 248, 233, 0.78);
+  border: 1px solid rgba(46, 125, 50, 0.12);
+  border-radius: 18px;
+}
+
+.ai-kpi {
+  min-height: 112px;
+}
+
+.ai-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.38);
+  border: 1px solid rgba(46,125,50,0.08);
+}
+
+.ai-step-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  box-shadow: inset 2px 2px 4px rgba(0,0,0,.12), inset -2px -2px 4px rgba(255,255,255,.7);
+  flex: 0 0 auto;
+}
+
+.ai-step.active .ai-step-dot,
+.ai-step.done .ai-step-dot {
+  background: #2e7d32;
+}
+
+.ai-step.done {
+  color: #1b5e20;
+}
+
+.ai-output-card {
+  border-radius: 16px;
+  background: rgba(255,255,255,0.52);
+  border: 1px solid rgba(46,125,50,0.12);
+  min-height: 220px;
+}
+
+.ai-output {
+  white-space: pre-wrap;
+  line-height: 1.6;
+  color: #334155;
+  min-height: 128px;
+}
+
+.ai-channel-tab {
+  min-height: 44px;
+  border-radius: 14px;
+  padding: 9px 12px;
+  font-weight: 800;
+  color: #2e7d32;
+  background: var(--bg);
+  box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
+  transition: all .2s ease;
+}
+
+.ai-channel-tab.active {
+  color: #fff;
+  background: linear-gradient(145deg, #43a047, #2e7d32);
+}
+
+.ai-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: rgba(46,125,50,.1);
+  color: #1b5e20;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ai-textarea {
+  min-height: 128px;
+  resize: vertical;
+}
+
+@media (max-width: 1180px) {
+  .ai-workspace { grid-template-columns: 1fr; }
+}
+
 .page { display: none; animation: fadeIn 0.6s ease-out; }
 .page:not(.hidden) { display: block; }
 .hidden { display: none !important; }
@@ -1103,6 +1199,10 @@ i.fa-whatsapp{
           <i class="fas fa-chart-line icon-glow-green w-6 text-center"></i>
           <span>Tableau de Bord</span>
         </button>
+        <button onclick="showPage('aiMarketing')" class="neu-sidebar-item">
+          <i class="fas fa-bullhorn icon-glow-indigo w-6 text-center"></i>
+          <span>NEYA AI Marketing</span>
+        </button>
         <button onclick="showPage('newDonation')" class="neu-sidebar-item">
           <i class="fas fa-hand-holding-heart icon-glow-red w-6 text-center"></i>
           <span>Nouveau Don</span>
@@ -1262,6 +1362,201 @@ i.fa-whatsapp{
             </h3>
             <canvas id="statusChart" height="220"></canvas>
           </div>
+        </div>
+      </div>
+
+      <!-- NEYA AI MARKETING -->
+      <div id="page-aiMarketing" class="page hidden">
+        <div class="print-header">
+          <h1><i class="fas fa-bullhorn"></i> NEYA CHARITY - NEYA AI Marketing</h1>
+          <p>Centre de commande pour les reseaux sociaux : Facebook, Instagram, Snapchat, TikTok et LinkedIn.</p>
+        </div>
+
+        <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div class="ai-status-pill mb-3"><i class="fas fa-circle text-green-600 text-[8px]"></i> Module Phase 1 actif</div>
+            <h2 class="text-3xl font-black text-green-900 flex items-center gap-3">
+              <i class="fas fa-bullhorn icon-glow-indigo"></i> NEYA AI Marketing
+            </h2>
+            <p class="text-sm font-semibold text-gray-600 mt-1">Publier une action, generer la campagne, valider, puis programmer.</p>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <button onclick="neyaFillFromLatestAction()" class="neu-btn-secondary px-4 py-3">
+              <i class="fas fa-magic mr-2 icon-glow-purple"></i> Depuis le dernier don
+            </button>
+            <button onclick="neyaSaveCampaignDraft()" class="neu-btn-secondary px-4 py-3">
+              <i class="fas fa-save mr-2 icon-glow-cyan"></i> Enregistrer
+            </button>
+            <button onclick="neyaGenerateAllContent()" class="neu-btn px-5 py-3">
+              <i class="fas fa-wand-magic-sparkles mr-2 icon-glow-yellow"></i> Tout generer
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div class="neu-card ai-kpi p-5">
+            <p class="text-xs font-bold text-gray-500 uppercase">Campagnes</p>
+            <h3 id="aiKpiCampaigns" class="text-3xl font-black text-green-800 mt-2">0</h3>
+            <p class="text-xs text-gray-500 mt-2">brouillons locaux</p>
+          </div>
+          <div class="neu-card ai-kpi p-5">
+            <p class="text-xs font-bold text-gray-500 uppercase">Canaux prets</p>
+            <h3 id="aiKpiChannels" class="text-3xl font-black text-blue-700 mt-2">0/5</h3>
+            <p class="text-xs text-gray-500 mt-2">Facebook, Instagram, Snapchat, TikTok, LinkedIn</p>
+          </div>
+          <div class="neu-card ai-kpi p-5">
+            <p class="text-xs font-bold text-gray-500 uppercase">SEO</p>
+            <h3 id="aiKpiSeo" class="text-3xl font-black text-orange-600 mt-2">--</h3>
+            <p class="text-xs text-gray-500 mt-2">score de qualite</p>
+          </div>
+          <div class="neu-card ai-kpi p-5">
+            <p class="text-xs font-bold text-gray-500 uppercase">Statut</p>
+            <h3 id="aiKpiStatus" class="text-xl font-black text-green-800 mt-3">A preparer</h3>
+            <p id="aiKpiDate" class="text-xs text-gray-500 mt-2">Aucune programmation</p>
+          </div>
+        </div>
+
+        <div class="ai-workspace">
+          <section class="neu-card p-6 ai-panel">
+            <h3 class="font-black text-xl text-green-900 mb-5 flex items-center gap-2">
+              <i class="fas fa-pen-to-square icon-glow-green"></i> Nouvelle action humanitaire
+            </h3>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-bold text-gray-600 mb-2">Titre</label>
+                <input id="aiActionTitle" class="neu-input" value="Construction d'un puits au Senegal">
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm font-bold text-gray-600 mb-2">Pays</label>
+                  <input id="aiActionCountry" class="neu-input" value="Senegal">
+                </div>
+                <div>
+                  <label class="block text-sm font-bold text-gray-600 mb-2">Categorie</label>
+                  <select id="aiActionCategory" class="neu-select">
+                    <option>Eau</option>
+                    <option>Arbres</option>
+                    <option>Parrainage</option>
+                    <option>Repas</option>
+                    <option>Urgence</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-bold text-gray-600 mb-2">Resume terrain</label>
+                <textarea id="aiActionSummary" class="neu-input ai-textarea">Aujourd'hui, l'equipe NEYA Charity a finalise un nouveau puits qui permettra a plusieurs familles d'acceder a une eau propre et plus proche de leur village.</textarea>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm font-bold text-gray-600 mb-2">Beneficiaires</label>
+                  <input id="aiActionBeneficiaries" type="number" class="neu-input" value="150">
+                </div>
+                <div>
+                  <label class="block text-sm font-bold text-gray-600 mb-2">Date cible</label>
+                  <input id="aiScheduleDate" type="datetime-local" class="neu-input">
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-bold text-gray-600 mb-2">Mots-cles</label>
+                <input id="aiActionKeywords" class="neu-input" value="eau potable, solidarite, puits, don, Senegal">
+              </div>
+              <div>
+                <label class="block text-sm font-bold text-gray-600 mb-2">Medias</label>
+                <input id="aiActionMedia" type="file" multiple class="neu-input">
+              </div>
+            </div>
+
+            <div class="mt-6 space-y-3">
+              <div id="aiStepArticle" class="ai-step active"><span class="ai-step-dot"></span><span class="font-bold text-sm">Article et SEO</span></div>
+              <div id="aiStepSocial" class="ai-step"><span class="ai-step-dot"></span><span class="font-bold text-sm">Reseaux sociaux</span></div>
+              <div id="aiStepNewsletter" class="ai-step"><span class="ai-step-dot"></span><span class="font-bold text-sm">Newsletter</span></div>
+              <div id="aiStepSchedule" class="ai-step"><span class="ai-step-dot"></span><span class="font-bold text-sm">Validation et programmation</span></div>
+            </div>
+          </section>
+
+          <section class="space-y-6">
+            <div class="neu-card p-5 ai-panel">
+              <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <h3 class="font-black text-xl text-green-900 flex items-center gap-2">
+                  <i class="fas fa-layer-group icon-glow-purple"></i> Contenus generes
+                </h3>
+                <div class="flex flex-wrap gap-2">
+                  <button class="ai-channel-tab active" data-ai-channel="facebook" onclick="neyaSelectAiChannel('facebook')">Facebook</button>
+                  <button class="ai-channel-tab" data-ai-channel="instagram" onclick="neyaSelectAiChannel('instagram')">Instagram</button>
+                  <button class="ai-channel-tab" data-ai-channel="snapchat" onclick="neyaSelectAiChannel('snapchat')">Snapchat</button>
+                  <button class="ai-channel-tab" data-ai-channel="tiktok" onclick="neyaSelectAiChannel('tiktok')">TikTok</button>
+                  <button class="ai-channel-tab" data-ai-channel="linkedin" onclick="neyaSelectAiChannel('linkedin')">LinkedIn</button>
+                </div>
+              </div>
+              <div class="ai-output-card p-5">
+                <div class="flex items-start justify-between gap-4 mb-3">
+                  <div>
+                    <p id="aiOutputLabel" class="text-xs font-bold uppercase text-gray-500">Facebook</p>
+                    <h4 id="aiOutputTitle" class="font-black text-lg text-green-800">Pret a generer</h4>
+                  </div>
+                  <button onclick="neyaCopyCurrentOutput()" class="neu-icon-btn" title="Copier">
+                    <i class="fas fa-copy icon-glow-cyan"></i>
+                  </button>
+                </div>
+                <div id="aiOutputText" class="ai-output text-sm">Clique sur "Tout generer" pour creer les contenus de la campagne.</div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <div class="neu-card p-5 ai-panel">
+                <h3 class="font-black text-lg text-green-900 mb-4 flex items-center gap-2">
+                  <i class="fas fa-search icon-glow-blue"></i> SEO Google
+                </h3>
+                <div class="space-y-3 text-sm">
+                  <p><span class="font-black text-gray-600">Meta-description :</span></p>
+                  <p id="aiSeoDescription" class="text-gray-700">A generer.</p>
+                  <p><span class="font-black text-gray-600">FAQ :</span></p>
+                  <div id="aiSeoFaq" class="text-gray-700 space-y-2">A generer.</div>
+                </div>
+              </div>
+
+              <div class="neu-card p-5 ai-panel">
+                <h3 class="font-black text-lg text-green-900 mb-4 flex items-center gap-2">
+                  <i class="fas fa-calendar-check icon-glow-orange"></i> Programmation Buffer
+                </h3>
+                <div id="aiSchedulePreview" class="space-y-3 text-sm text-gray-700">
+                  <p>Aucune publication programmee.</p>
+                </div>
+                <div class="mt-5 flex flex-wrap gap-3">
+                  <button onclick="neyaApproveCampaign()" class="neu-btn px-4 py-2">
+                    <i class="fas fa-check mr-2 icon-glow-yellow"></i> Valider
+                  </button>
+                  <button onclick="neyaScheduleCampaign()" class="neu-btn-secondary px-4 py-2">
+                    <i class="fas fa-calendar-plus mr-2 icon-glow-cyan"></i> Programmer
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="neu-card p-5 ai-panel">
+              <h3 class="font-black text-lg text-green-900 mb-4 flex items-center gap-2">
+                <i class="fas fa-language icon-glow-pink"></i> Traductions et rapport IA
+              </h3>
+              <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 text-sm">
+                <div class="neu-concave p-4">
+                  <p class="font-black text-green-800 mb-2">Francais</p>
+                  <p id="aiTranslationFr">A generer.</p>
+                </div>
+                <div class="neu-concave p-4">
+                  <p class="font-black text-blue-800 mb-2">Anglais</p>
+                  <p id="aiTranslationEn">To generate.</p>
+                </div>
+                <div class="neu-concave p-4">
+                  <p class="font-black text-purple-800 mb-2">Arabe</p>
+                  <p id="aiTranslationAr">بانتظار الانشاء.</p>
+                </div>
+              </div>
+              <div class="mt-5 p-4 rounded-xl bg-white/50 border border-green-100">
+                <p class="font-black text-gray-600 mb-2">Rapport automatique hebdomadaire</p>
+                <p id="aiWeeklyInsight" class="text-sm text-gray-700">Le rapport sera disponible apres generation et validation de la campagne.</p>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
 
@@ -2820,6 +3115,119 @@ Un puits = une aumône continue (sadaqa jariya) ✨
   </div>
 </div>
 
+<!-- ═══════ SYNCHRONISATION MULTI-POSTES (données partagées entre ordinateurs) ═══════ -->
+<!-- NEYA_UI_BUILD:3 -->
+<script>
+(function(){
+  // Adresse du serveur central. Vide = ce poste EST le serveur (même origine).
+  function base(){ try{ return (localStorage.getItem('neya_sync_base')||'').replace(/\/$/,''); }catch(e){ return ''; } }
+  // Clés (buckets) synchronisées. Le reste (config WhatsApp, adresse serveur…) reste local.
+  var KEYS = ['wells_neuya','trees_neuya','donors_neuya','invoices_neuya','employees_neuya','leaves_neuya','contacts_neuya','neya_ai_marketing_campaigns','wa_archives_neuya','neya_initialized'];
+  window.NEYA_SYNC_KEYS = KEYS;
+  window.__neyaRev = -1;        // dernière révision connue
+  window.__neyaApplying = false; // vrai pendant l'application de données distantes (évite la boucle)
+  var _set = localStorage.setItem.bind(localStorage);
+  var _last = {};              // dernière valeur poussée par clé (évite les envois inutiles)
+
+  // 1) Pousser toute écriture d'une clé synchronisée vers le serveur
+  localStorage.setItem = function(k, v){
+    _set(k, v);
+    if (!window.__neyaApplying && KEYS.indexOf(k) >= 0 && _last[k] !== v){
+      _last[k] = v;
+      try{
+        var x = new XMLHttpRequest();
+        x.open('POST', base()+'/api/kv', true);
+        x.setRequestHeader('Content-Type','application/json');
+        x.onload = function(){ try{ var j=JSON.parse(x.responseText); if(j && j.rev!=null && j.rev>window.__neyaRev) window.__neyaRev=j.rev; }catch(e){} };
+        x.send(JSON.stringify({ key:k, value:v }));
+      }catch(e){}
+    }
+  };
+
+  // 2) Appliquer les données reçues du serveur ; recharger si quelque chose a changé
+  function apply(r, allowReload){
+    var d = r.data||{}, changed=false;
+    window.__neyaApplying = true;
+    for (var k in d){ if (KEYS.indexOf(k)>=0 && d[k]!=null){ _last[k]=d[k]; if (localStorage.getItem(k)!==d[k]){ _set(k, d[k]); changed=true; } } }
+    window.__neyaApplying = false;
+    window.__neyaRev = r.rev||0;
+    if (changed && allowReload){
+      var ae = document.activeElement, tag = ae?ae.tagName:'';
+      if (tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||(ae&&ae.isContentEditable)) showBanner();
+      else location.reload();
+    }
+  }
+  function pull(allowReload){
+    try{
+      var x = new XMLHttpRequest();
+      x.open('GET', base()+'/api/kv', true);
+      x.onload = function(){ if(x.status>=200&&x.status<300){ try{ apply(JSON.parse(x.responseText||'{}'), allowReload); window.__neyaOnline=true; }catch(e){} } };
+      x.onerror = function(){ window.__neyaOnline=false; };
+      x.send(null);
+    }catch(e){}
+  }
+  function checkRev(){
+    try{
+      var x = new XMLHttpRequest();
+      x.open('GET', base()+'/api/rev', true);
+      x.onload = function(){ if(x.status>=200&&x.status<300){ try{ var r=JSON.parse(x.responseText); if((r.rev||0)!==window.__neyaRev) pull(true); }catch(e){} } };
+      x.send(null);
+    }catch(e){}
+  }
+  function showBanner(){
+    if (document.getElementById('neyaSyncBanner')) return;
+    var b = document.createElement('div');
+    b.id = 'neyaSyncBanner';
+    b.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:99999;background:#16a34a;color:#fff;padding:10px 16px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.25);cursor:pointer;font-family:sans-serif;font-size:14px';
+    b.textContent = '🔄 بيانات جديدة متوفّرة — اضغط للتحديث';
+    b.onclick = function(){ location.reload(); };
+    (document.body||document.documentElement).appendChild(b);
+  }
+  // Fenêtre de réglage de l'adresse du serveur (fenêtre HTML maison :
+  // Electron ne supporte PAS window.prompt(), il faut donc une vraie boîte de dialogue).
+  window.neyaSetServer = function(){
+    var ex = document.getElementById('neyaSrvModal');
+    if (ex){ ex.style.display='flex'; var inp=document.getElementById('neyaSrvInput'); if(inp){ inp.value=base(); inp.focus(); } return; }
+    var ov = document.createElement('div');
+    ov.id = 'neyaSrvModal';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2147483000;display:flex;align-items:center;justify-content:center;font-family:sans-serif';
+    ov.innerHTML =
+      '<div dir="rtl" style="background:#fff;color:#12332a;border-radius:16px;padding:22px;width:90vw;max-width:430px;box-shadow:0 12px 44px rgba(0,0,0,.4)">'
+      + '<div style="font-size:18px;font-weight:bold;margin-bottom:8px">⚙ إعداد السيرفر المشترك</div>'
+      + '<div style="font-size:13px;color:#4b6b60;margin-bottom:14px;line-height:1.6">كتب عنوان جهاز الإدارة (السيرفر).<br>خلّيه <b>فارغ</b> إذا هاد الجهاز هو السيرفر.</div>'
+      + '<input id="neyaSrvInput" type="text" spellcheck="false" placeholder="http://192.168.1.50:8787" style="width:100%;padding:11px 12px;border:1.5px solid #cfe0d8;border-radius:10px;font-size:14px;direction:ltr;text-align:left;outline:none" />'
+      + '<div style="display:flex;gap:10px;margin-top:18px">'
+      + '<button id="neyaSrvSave" style="flex:1;background:#16a34a;color:#fff;border:none;padding:11px;border-radius:10px;font-size:15px;font-weight:bold;cursor:pointer">💾 حفظ</button>'
+      + '<button id="neyaSrvCancel" style="background:#e5e7eb;color:#333;border:none;padding:11px 18px;border-radius:10px;font-size:15px;cursor:pointer">إلغاء</button>'
+      + '</div></div>';
+    (document.body||document.documentElement).appendChild(ov);
+    var inp = document.getElementById('neyaSrvInput');
+    inp.value = base(); inp.focus();
+    function close(){ ov.style.display='none'; }
+    function save(){
+      var v = inp.value.trim().replace(/\/$/,'');
+      localStorage.setItem('neya_sync_base', v); // clé locale à ce poste (non synchronisée)
+      location.reload();
+    }
+    document.getElementById('neyaSrvCancel').onclick = close;
+    document.getElementById('neyaSrvSave').onclick = save;
+    ov.onclick = function(e){ if (e.target===ov) close(); };
+    inp.onkeydown = function(e){ if (e.key==='Enter') save(); if (e.key==='Escape') close(); };
+  };
+  document.addEventListener('DOMContentLoaded', function(){
+    var g = document.createElement('div');
+    g.title = 'إعداد السيرفر المشترك';
+    g.style.cssText = 'position:fixed;bottom:10px;left:10px;z-index:99998;background:#0f766e;color:#fff;padding:6px 10px;border-radius:8px;cursor:pointer;font-family:sans-serif;font-size:12px;opacity:.85';
+    g.textContent = '⚙ السيرفر';
+    g.onclick = window.neyaSetServer;
+    document.body.appendChild(g);
+  });
+  // Premier tirage au démarrage, puis sondage régulier
+  pull(true);
+  setInterval(checkRev, 4000);
+})();
+</script>
+
 <script>
 function neyaLoad(k){try{var v=JSON.parse(localStorage.getItem(k));return Array.isArray(v)?v:[];}catch(e){return [];}}
 let currentLang='fr',wells=neyaLoad('wells_neuya'),trees=neyaLoad('trees_neuya'),donors=neyaLoad('donors_neuya'),invoices=neyaLoad('invoices_neuya'),employees=neyaLoad('employees_neuya'),leaves=neyaLoad('leaves_neuya'),contacts=neyaLoad('contacts_neuya'),currentId=null,currentTemplate=1,donationType='well',posterType='well',currentReceiptItem=null,currentReceiptTypeLabel='';
@@ -2831,7 +3239,58 @@ function loadDemoData(){if(wells.length===0 && !localStorage.getItem('neya_initi
 function saveData(){localStorage.setItem('wells_neuya',JSON.stringify(wells));localStorage.setItem('trees_neuya',JSON.stringify(trees));localStorage.setItem('donors_neuya',JSON.stringify(donors));localStorage.setItem('invoices_neuya',JSON.stringify(invoices));localStorage.setItem('employees_neuya',JSON.stringify(employees));localStorage.setItem('leaves_neuya',JSON.stringify(leaves));localStorage.setItem('contacts_neuya',JSON.stringify(contacts));localStorage.setItem('neya_initialized','1');if(typeof driveAutoBackupTrigger==='function'){try{driveAutoBackupTrigger();}catch(e){}}}
 function login(e){e.preventDefault();const em=document.getElementById('loginEmail').value,pw=document.getElementById('loginPassword').value;if(em==='admin@neya.org'&&pw==='admin123'){document.getElementById('loginScreen').classList.add('hidden');document.getElementById('mainApp').classList.remove('hidden');loadDemoData();showPage('dashboard');}else{alert('Identifiants incorrects');}}
 function logout(){document.getElementById('mainApp').classList.add('hidden');document.getElementById('loginScreen').classList.remove('hidden');}
-function showPage(p){document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden'));document.getElementById('page-'+p).classList.remove('hidden');document.querySelectorAll('.neu-sidebar-item').forEach(i=>i.classList.remove('active'));if(event&&event.currentTarget){event.currentTarget.classList.add('active');}if(p==='dashboard')updateDashboard();if(p==='wells')updateWellsTable();if(p==='trees')updateTreesTable();if(p==='donors')updateDonorsTable();if(p==='posters')updatePosterSelect();if(p==='reports')updateReports();if(p==='tableau'){tableauSyncNeyaDonations();tableauShowSheet(0);}if(p==='whatsapp')waInit();if(p==='factures')updateFacturesTable();if(p==='conges')updateConges();if(p==='contacts')updateContactsTable();if(p==='newDonation')setTimeout(function(){if(typeof initSignature==='function'){initSignature();window.dispatchEvent(new Event('resize'));}},60);}
+function showPage(p){document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden'));const page=document.getElementById('page-'+p);if(!page)return;page.classList.remove('hidden');document.querySelectorAll('.neu-sidebar-item').forEach(i=>i.classList.remove('active'));const ev=window.event;if(ev&&ev.currentTarget&&ev.currentTarget.classList&&ev.currentTarget.classList.contains('neu-sidebar-item')){ev.currentTarget.classList.add('active');}else{const nav=[...document.querySelectorAll('.neu-sidebar-item')].find(btn=>(btn.getAttribute('onclick')||'').includes("showPage('"+p+"')"));nav?.classList.add('active');}if(p==='dashboard')updateDashboard();if(p==='aiMarketing')neyaUpdateAiDashboard();if(p==='wells')updateWellsTable();if(p==='trees')updateTreesTable();if(p==='donors')updateDonorsTable();if(p==='posters')updatePosterSelect();if(p==='reports')updateReports();if(p==='tableau'){tableauSyncNeyaDonations();tableauShowSheet(0);}if(p==='whatsapp')waInit();if(p==='factures')updateFacturesTable();if(p==='conges')updateConges();if(p==='contacts')updateContactsTable();if(p==='newDonation')setTimeout(function(){if(typeof initSignature==='function'){initSignature();window.dispatchEvent(new Event('resize'));}},60);}
+let neyaAiCurrentChannel='facebook';
+let neyaAiOutputs={};
+let neyaAiLastCampaign=null;
+function neyaLoadCampaigns(){try{return JSON.parse(localStorage.getItem('neya_ai_marketing_campaigns')||'[]');}catch(e){return [];}}
+function neyaStoreCampaign(campaign){const campaigns=neyaLoadCampaigns();const idx=campaigns.findIndex(c=>c.id===campaign.id);if(idx>=0)campaigns[idx]=campaign;else campaigns.unshift(campaign);localStorage.setItem('neya_ai_marketing_campaigns',JSON.stringify(campaigns.slice(0,30)));neyaUpdateAiDashboard();}
+function neyaGetAiInput(){return{title:document.getElementById('aiActionTitle')?.value.trim()||'Nouvelle action humanitaire',country:document.getElementById('aiActionCountry')?.value.trim()||'terrain',category:document.getElementById('aiActionCategory')?.value||'Action',summary:document.getElementById('aiActionSummary')?.value.trim()||'',beneficiaries:document.getElementById('aiActionBeneficiaries')?.value||'plusieurs',keywords:document.getElementById('aiActionKeywords')?.value.trim()||'solidarite, NEYA Charity',mediaCount:document.getElementById('aiActionMedia')?.files?.length||0,scheduleDate:document.getElementById('aiScheduleDate')?.value||''};}
+function neyaTitleCase(value){return String(value||'').replace(/\s+/g,' ').trim();}
+function neyaHashtag(value){return '#'+String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'').slice(0,28);}
+function neyaBuildHashtags(input){const words=input.keywords.split(',').map(w=>w.trim()).filter(Boolean);const base=['NEYACharity',input.category,input.country,'Solidarite','Don'].map(neyaHashtag);return [...new Set([...base,...words.map(neyaHashtag)])].filter(h=>h.length>1).slice(0,10).join(' ');}
+function neyaBuildCampaignOutputs(input){
+  const title=neyaTitleCase(input.title);
+  const country=neyaTitleCase(input.country);
+  const category=neyaTitleCase(input.category);
+  const beneficiaries=input.beneficiaries;
+  const hashtags=neyaBuildHashtags(input);
+  const mediaLine=input.mediaCount>0?`${input.mediaCount} media(s) joint(s) sont prets pour les visuels.`:'Ajouter au moins une photo permettra de creer une miniature, une story et un carrousel.';
+  return{
+    facebook:{label:'Facebook',title:'Publication emotionnelle',body:`${title}\n\n${input.summary}\n\nGrace a votre generosite, environ ${beneficiaries} personnes au ${country} beneficient d'une aide concrete. Chaque don compte et chaque partage peut toucher une nouvelle famille.\n\nMerci de faire avancer cette mission avec NEYA Charity.\n\n${hashtags}`},
+    instagram:{label:'Instagram',title:'Legende courte',body:`${title}\n\nUne action concrete au ${country}, portee par vos dons et par l'engagement de NEYA Charity.\n\nImpact estime : ${beneficiaries} beneficiaires.\n\n${hashtags}`},
+    snapchat:{label:'Snapchat',title:'Snap / Story',body:`${title} 📍 ${country}\n\n${input.summary}\n\nGrace a vous, ${beneficiaries} beneficiaires aides sur le terrain 🙌💧\n\nSwipe up pour soutenir NEYA Charity !\n\n${hashtags}`},
+    tiktok:{label:'TikTok',title:'Script 20 secondes',body:`0-3s : Plan d'ouverture sur le lieu ou les photos du projet.\nTexte ecran : ${title}\n\n4-10s : Montrer l'action et les beneficiaires.\nVoix off : "Au ${country}, votre solidarite devient une aide concrete."\n\n11-16s : Afficher l'impact.\nTexte ecran : "${beneficiaries} beneficiaires aides"\n\n17-20s : Logo NEYA Charity + appel au don.\nVoix off : "Ensemble, continuons."`},
+    linkedin:{label:'LinkedIn',title:'Version professionnelle',body:`NEYA Charity poursuit son engagement terrain avec l'action suivante : ${title}.\n\nCette initiative au ${country} s'inscrit dans une logique d'impact mesurable, de suivi des projets et de transparence envers les donateurs. Elle concerne environ ${beneficiaries} beneficiaires et renforce notre mission : transformer la solidarite en resultats concrets.\n\nNous remercions les partenaires, benevoles et donateurs qui rendent ces actions possibles.`}
+  };
+}
+function neyaGenerateAllContent(){
+  const input=neyaGetAiInput();
+  neyaAiOutputs=neyaBuildCampaignOutputs(input);
+  const faq=`<p><strong>Quel est l'objectif ?</strong><br>Apporter une aide concrete dans la categorie ${input.category} au ${input.country}.</p><p><strong>Combien de personnes sont aidees ?</strong><br>Environ ${input.beneficiaries} beneficiaires.</p><p><strong>Comment suivre le projet ?</strong><br>Les photos, rapports et publications sont centralises dans l'administration NEYA Charity.</p>`;
+  const meta=`${input.title} : NEYA Charity agit au ${input.country} pour aider environ ${input.beneficiaries} beneficiaires. Decouvrez l'impact et soutenez la mission.`;
+  document.getElementById('aiSeoDescription').textContent=meta.slice(0,158);
+  document.getElementById('aiSeoFaq').innerHTML=faq;
+  document.getElementById('aiTranslationFr').textContent=`${input.title} - une action concrete de NEYA Charity au ${input.country}.`;
+  document.getElementById('aiTranslationEn').textContent=`${input.title} - a concrete NEYA Charity action in ${input.country}.`;
+  document.getElementById('aiTranslationAr').textContent=`${input.title} - عمل انساني من NEYA Charity في ${input.country}.`;
+  document.getElementById('aiWeeklyInsight').textContent=`Priorite recommandee : publier d'abord Instagram et Facebook, puis relancer LinkedIn avec les resultats terrain. Les actions "${input.category}" doivent etre suivies avec photos avant/apres.`;
+  neyaAiLastCampaign={id:Date.now(),createdAt:new Date().toISOString(),status:'Generee',input,outputs:neyaAiOutputs,seoScore:neyaComputeSeoScore(input),approved:false,scheduled:false};
+  neyaStoreCampaign(neyaAiLastCampaign);
+  neyaMarkAiStep('article',true);neyaMarkAiStep('social',true);neyaMarkAiStep('newsletter',true);neyaMarkAiStep('schedule',false);
+  neyaSelectAiChannel(neyaAiCurrentChannel||'facebook');
+}
+function neyaComputeSeoScore(input){let score=62;if(input.title.length>=35)score+=8;if(input.summary.length>=120)score+=10;if(input.keywords.split(',').length>=4)score+=8;if(Number(input.beneficiaries)>0)score+=6;if(input.mediaCount>0)score+=6;return Math.min(score,98);}
+function neyaSelectAiChannel(channel){neyaAiCurrentChannel=channel;document.querySelectorAll('.ai-channel-tab').forEach(btn=>btn.classList.toggle('active',btn.dataset.aiChannel===channel));const output=neyaAiOutputs[channel];document.getElementById('aiOutputLabel').textContent=output?.label||'Contenu';document.getElementById('aiOutputTitle').textContent=output?.title||'Pret a generer';document.getElementById('aiOutputText').textContent=output?.body||'Clique sur "Tout generer" pour creer les contenus de la campagne.';}
+function neyaCopyCurrentOutput(){const text=document.getElementById('aiOutputText')?.textContent||'';if(!text.trim())return;if(navigator.clipboard){navigator.clipboard.writeText(text).then(()=>alert('Contenu copie.')).catch(()=>neyaFallbackCopy(text));}else{neyaFallbackCopy(text);}}
+function neyaFallbackCopy(text){const area=document.createElement('textarea');area.value=text;document.body.appendChild(area);area.select();document.execCommand('copy');area.remove();alert('Contenu copie.');}
+function neyaSaveCampaignDraft(){const input=neyaGetAiInput();const campaign=neyaAiLastCampaign||{id:Date.now(),createdAt:new Date().toISOString(),outputs:{},seoScore:0,approved:false,scheduled:false};campaign.input=input;campaign.status=campaign.outputs&&Object.keys(campaign.outputs).length?'Brouillon genere':'Brouillon';neyaAiLastCampaign=campaign;neyaStoreCampaign(campaign);alert('Brouillon enregistre.');}
+function neyaApproveCampaign(){if(!neyaAiLastCampaign||!neyaAiLastCampaign.outputs||!Object.keys(neyaAiLastCampaign.outputs).length){alert("Generez d'abord la campagne.");return;}neyaAiLastCampaign.approved=true;neyaAiLastCampaign.status='Validee';neyaStoreCampaign(neyaAiLastCampaign);neyaMarkAiStep('schedule',true);alert('Campagne validee.');}
+function neyaScheduleCampaign(){if(!neyaAiLastCampaign||!neyaAiLastCampaign.outputs||!Object.keys(neyaAiLastCampaign.outputs).length){alert("Generez d'abord la campagne.");return;}if(!neyaAiLastCampaign.approved){alert('Validez la campagne avant programmation.');return;}const input=neyaGetAiInput();const date=input.scheduleDate?new Date(input.scheduleDate):new Date(Date.now()+86400000);neyaAiLastCampaign.scheduled=true;neyaAiLastCampaign.status='Programmee';neyaAiLastCampaign.scheduledAt=date.toISOString();neyaStoreCampaign(neyaAiLastCampaign);neyaRenderSchedule(date);alert('Programmation preparee pour Buffer.');}
+function neyaRenderSchedule(date){const dateText=date.toLocaleString('fr-FR',{dateStyle:'medium',timeStyle:'short'});document.getElementById('aiSchedulePreview').innerHTML=`<div class="ai-step done"><span class="ai-step-dot"></span><span><strong>Facebook / Instagram</strong><br>${dateText}</span></div><div class="ai-step done"><span class="ai-step-dot"></span><span><strong>LinkedIn</strong><br>${dateText}</span></div><div class="ai-step done"><span class="ai-step-dot"></span><span><strong>Newsletter</strong><br>${dateText}</span></div>`;document.getElementById('aiKpiDate').textContent=dateText;}
+function neyaMarkAiStep(name,done){const el=document.getElementById('aiStep'+name.charAt(0).toUpperCase()+name.slice(1));if(!el)return;el.classList.toggle('done',!!done);el.classList.toggle('active',!done);}
+function neyaFillFromLatestAction(){const items=[...(wells||[]).map(item=>({...item,kind:'Puits'})),...(trees||[]).map(item=>({...item,kind:'Arbres'}))];if(items.length===0){loadDemoData();return neyaFillFromLatestAction();}items.sort((a,b)=>new Date(b.date)-new Date(a.date));const item=items[0];document.getElementById('aiActionTitle').value=item.kind==='Puits'?`Construction du puits ${item.wellNumber} au ${item.country}`:`Plantation ${item.treeNumber} au ${item.country}`;document.getElementById('aiActionCountry').value=item.country||'';document.getElementById('aiActionCategory').value=item.kind==='Puits'?'Eau':'Arbres';document.getElementById('aiActionBeneficiaries').value=item.beneficiariesCount||'';document.getElementById('aiActionKeywords').value=`${item.kind}, ${item.country}, NEYA Charity, don, solidarite`;document.getElementById('aiActionSummary').value=item.notes||`Le projet ${item.kind.toLowerCase()} soutient ${item.beneficiariesCount||'plusieurs'} beneficiaires au ${item.country}.`;neyaGenerateAllContent();}
+function neyaUpdateAiDashboard(){const campaigns=neyaLoadCampaigns();const latest=neyaAiLastCampaign||campaigns[0]||null;if(latest){neyaAiLastCampaign=latest;if(latest.outputs&&Object.keys(latest.outputs).length){neyaAiOutputs=latest.outputs;neyaSelectAiChannel(neyaAiCurrentChannel||'facebook');}document.getElementById('aiKpiSeo').textContent=latest.seoScore?latest.seoScore+'/100':'--';document.getElementById('aiKpiStatus').textContent=latest.status||'Brouillon';if(latest.scheduledAt)document.getElementById('aiKpiDate').textContent=new Date(latest.scheduledAt).toLocaleString('fr-FR',{dateStyle:'medium',timeStyle:'short'});}document.getElementById('aiKpiCampaigns').textContent=campaigns.length;document.getElementById('aiKpiChannels').textContent=Object.keys(neyaAiOutputs||{}).length+'/5';}
 function setDonationType(ty){
   donationType=ty;
   document.getElementById('btnTypeWell').classList.toggle('active',ty==='well');
