@@ -3116,13 +3116,15 @@ Un puits = une aumône continue (sadaqa jariya) ✨
 </div>
 
 <!-- ═══════ SYNCHRONISATION MULTI-POSTES (données partagées entre ordinateurs) ═══════ -->
-<!-- NEYA_UI_BUILD:3 -->
+<!-- NEYA_UI_BUILD:4 -->
 <script>
 (function(){
   // Adresse du serveur central. Vide = ce poste EST le serveur (même origine).
   function base(){ try{ return (localStorage.getItem('neya_sync_base')||'').replace(/\/$/,''); }catch(e){ return ''; } }
   // Clés (buckets) synchronisées. Le reste (config WhatsApp, adresse serveur…) reste local.
-  var KEYS = ['wells_neuya','trees_neuya','donors_neuya','invoices_neuya','employees_neuya','leaves_neuya','contacts_neuya','neya_ai_marketing_campaigns','wa_archives_neuya','neya_initialized'];
+  var KEYS = ['wells_neuya','trees_neuya','donors_neuya','invoices_neuya','employees_neuya','leaves_neuya','contacts_neuya','neya_ai_marketing_campaigns','wa_archives_neuya','neya_initialized','neya_auth'];
+  // Clé de sécurité réseau (locale à ce poste, fournie par le poste serveur)
+  function syncKey(){ try{ return localStorage.getItem('neya_sync_key')||''; }catch(e){ return ''; } }
   window.NEYA_SYNC_KEYS = KEYS;
   window.__neyaRev = -1;        // dernière révision connue
   window.__neyaApplying = false; // vrai pendant l'application de données distantes (évite la boucle)
@@ -3138,6 +3140,7 @@ Un puits = une aumône continue (sadaqa jariya) ✨
         var x = new XMLHttpRequest();
         x.open('POST', base()+'/api/kv', true);
         x.setRequestHeader('Content-Type','application/json');
+        if (syncKey()) x.setRequestHeader('X-NEYA-KEY', syncKey());
         x.onload = function(){ try{ var j=JSON.parse(x.responseText); if(j && j.rev!=null && j.rev>window.__neyaRev) window.__neyaRev=j.rev; }catch(e){} };
         x.send(JSON.stringify({ key:k, value:v }));
       }catch(e){}
@@ -3161,6 +3164,7 @@ Un puits = une aumône continue (sadaqa jariya) ✨
     try{
       var x = new XMLHttpRequest();
       x.open('GET', base()+'/api/kv', true);
+      if (syncKey()) x.setRequestHeader('X-NEYA-KEY', syncKey());
       x.onload = function(){ if(x.status>=200&&x.status<300){ try{ apply(JSON.parse(x.responseText||'{}'), allowReload); window.__neyaOnline=true; }catch(e){} } };
       x.onerror = function(){ window.__neyaOnline=false; };
       x.send(null);
@@ -3170,6 +3174,7 @@ Un puits = une aumône continue (sadaqa jariya) ✨
     try{
       var x = new XMLHttpRequest();
       x.open('GET', base()+'/api/rev', true);
+      if (syncKey()) x.setRequestHeader('X-NEYA-KEY', syncKey());
       x.onload = function(){ if(x.status>=200&&x.status<300){ try{ var r=JSON.parse(x.responseText); if((r.rev||0)!==window.__neyaRev) pull(true); }catch(e){} } };
       x.send(null);
     }catch(e){}
@@ -3183,32 +3188,67 @@ Un puits = une aumône continue (sadaqa jariya) ✨
     b.onclick = function(){ location.reload(); };
     (document.body||document.documentElement).appendChild(b);
   }
-  // Fenêtre de réglage de l'adresse du serveur (fenêtre HTML maison :
+  // ── Sécurité : hachage SHA-256 du mot de passe (aucun mot de passe en clair) ──
+  window.neyaHashPw = function(p){
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(p)).then(function(b){
+      return Array.prototype.map.call(new Uint8Array(b), function(x){ return x.toString(16).padStart(2,'0'); }).join('');
+    });
+  };
+  // Fenêtre de réglage serveur + sécurité (fenêtre HTML maison :
   // Electron ne supporte PAS window.prompt(), il faut donc une vraie boîte de dialogue).
   window.neyaSetServer = function(){
-    var ex = document.getElementById('neyaSrvModal');
-    if (ex){ ex.style.display='flex'; var inp=document.getElementById('neyaSrvInput'); if(inp){ inp.value=base(); inp.focus(); } return; }
+    var old = document.getElementById('neyaSrvModal');
+    if (old) old.remove();
     var ov = document.createElement('div');
     ov.id = 'neyaSrvModal';
     ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2147483000;display:flex;align-items:center;justify-content:center;font-family:sans-serif';
+    var inpStyle = 'width:100%;padding:10px 12px;border:1.5px solid #cfe0d8;border-radius:10px;font-size:14px;direction:ltr;text-align:left;outline:none;margin-bottom:8px;box-sizing:border-box';
     ov.innerHTML =
-      '<div dir="rtl" style="background:#fff;color:#12332a;border-radius:16px;padding:22px;width:90vw;max-width:430px;box-shadow:0 12px 44px rgba(0,0,0,.4)">'
-      + '<div style="font-size:18px;font-weight:bold;margin-bottom:8px">⚙ إعداد السيرفر المشترك</div>'
-      + '<div style="font-size:13px;color:#4b6b60;margin-bottom:14px;line-height:1.6">كتب عنوان جهاز الإدارة (السيرفر).<br>خلّيه <b>فارغ</b> إذا هاد الجهاز هو السيرفر.</div>'
-      + '<input id="neyaSrvInput" type="text" spellcheck="false" placeholder="http://192.168.1.50:8787" style="width:100%;padding:11px 12px;border:1.5px solid #cfe0d8;border-radius:10px;font-size:14px;direction:ltr;text-align:left;outline:none" />'
+      '<div dir="rtl" style="background:#fff;color:#12332a;border-radius:16px;padding:22px;width:92vw;max-width:460px;max-height:90vh;overflow:auto;box-shadow:0 12px 44px rgba(0,0,0,.4)">'
+      + '<div style="font-size:18px;font-weight:bold;margin-bottom:8px">⚙ إعداد السيرفر والأمان</div>'
+      + '<div style="font-size:13px;color:#4b6b60;margin-bottom:8px;line-height:1.6">عنوان جهاز الإدارة (السيرفر). خلّيه <b>فارغ</b> إذا هاد الجهاز هو السيرفر.</div>'
+      + '<input id="neyaSrvInput" type="text" spellcheck="false" placeholder="http://192.168.1.50:8787" style="'+inpStyle+'" />'
+      + '<div style="font-size:13px;color:#4b6b60;margin:6px 0;line-height:1.6">🔑 مفتاح الأمان (للأجهزة العميلة فقط — انسخه من جهاز السيرفر):</div>'
+      + '<input id="neyaKeyInput" type="text" spellcheck="false" placeholder="مفتاح الأمان" style="'+inpStyle+'" />'
+      + '<div id="neyaLocalKey" style="font-size:11.5px;color:#0f766e;word-break:break-all;background:#f2f8f5;border-radius:8px;padding:8px;display:none"></div>'
+      + '<hr style="margin:16px 0;border:none;border-top:1px solid #e5efe9">'
+      + '<div style="font-size:14px;font-weight:bold;margin-bottom:6px">🔒 تغيير كلمة السر (كتطبّق على جميع الأجهزة)</div>'
+      + '<input id="neyaPwCur" type="password" placeholder="كلمة السر الحالية" style="'+inpStyle+';direction:rtl;text-align:right" />'
+      + '<input id="neyaPwNew" type="password" placeholder="كلمة السر الجديدة (8 حروف أو أكثر)" style="'+inpStyle+';direction:rtl;text-align:right" />'
+      + '<button id="neyaPwBtn" style="width:100%;background:#0f766e;color:#fff;border:none;padding:10px;border-radius:10px;font-size:14px;font-weight:bold;cursor:pointer">تغيير كلمة السر</button>'
       + '<div style="display:flex;gap:10px;margin-top:18px">'
       + '<button id="neyaSrvSave" style="flex:1;background:#16a34a;color:#fff;border:none;padding:11px;border-radius:10px;font-size:15px;font-weight:bold;cursor:pointer">💾 حفظ</button>'
       + '<button id="neyaSrvCancel" style="background:#e5e7eb;color:#333;border:none;padding:11px 18px;border-radius:10px;font-size:15px;cursor:pointer">إلغاء</button>'
       + '</div></div>';
     (document.body||document.documentElement).appendChild(ov);
     var inp = document.getElementById('neyaSrvInput');
-    inp.value = base(); inp.focus();
-    function close(){ ov.style.display='none'; }
+    var keyInp = document.getElementById('neyaKeyInput');
+    inp.value = base(); keyInp.value = syncKey(); inp.focus();
+    // Affiche la clé locale de CE poste (le backend ne la donne qu'en local)
+    fetch('/api/key').then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+      if (j && j.key){ var el=document.getElementById('neyaLocalKey'); el.style.display='block'; el.textContent='🗝️ مفتاح هاد الجهاز (اعطيه للأجهزة الأخرى): '+j.key; }
+    }).catch(function(){});
+    function close(){ ov.remove(); }
     function save(){
       var v = inp.value.trim().replace(/\/$/,'');
-      localStorage.setItem('neya_sync_base', v); // clé locale à ce poste (non synchronisée)
+      localStorage.setItem('neya_sync_base', v);        // locale à ce poste
+      localStorage.setItem('neya_sync_key', keyInp.value.trim()); // locale à ce poste
       location.reload();
     }
+    document.getElementById('neyaPwBtn').onclick = function(){
+      var cur = document.getElementById('neyaPwCur').value;
+      var nw  = document.getElementById('neyaPwNew').value;
+      if (nw.length < 8){ alert('كلمة السر الجديدة خاصها 8 حروف على الأقل'); return; }
+      window.neyaHashPw(cur).then(function(h){
+        var stored = window.neyaAuthHash ? window.neyaAuthHash() : '';
+        if (h !== stored){ alert('كلمة السر الحالية غير صحيحة'); return; }
+        window.neyaHashPw(nw).then(function(nh){
+          localStorage.setItem('neya_auth', JSON.stringify({ hash: nh })); // synchronisée partout
+          alert('✅ تبدّلات كلمة السر فجميع الأجهزة');
+          close();
+        });
+      });
+    };
     document.getElementById('neyaSrvCancel').onclick = close;
     document.getElementById('neyaSrvSave').onclick = save;
     ov.onclick = function(e){ if (e.target===ov) close(); };
@@ -3237,7 +3277,10 @@ function t(k,p){return tr.fr[p]?.[k]||k;}
 function openDonationTable(){showPage('tableau');}
 function loadDemoData(){if(wells.length===0 && !localStorage.getItem('neya_initialized')){wells=[{id:1,wellNumber:'2024-096',donorFirstName:'Mohamed',donorLastName:'Ali',donorPhone:'+33 6 12 34 56 78',donorEmail:'mohamed@gmail.com',beneficiaryName:'Al-Haj Abdallah',country:'Sénégal',beneficiariesCount:150,beneficiaryStatus:'Décédé',amount:150,paymentMethod:'Virement',visibility:'Public',status:'Conception',notes:'',date:'2024-05-19',files:[]},{id:2,wellNumber:'2024-095',donorFirstName:'Fatima',donorLastName:'Hassan',donorPhone:'+33 7 98 76 54 32',donorEmail:'fatima@gmail.com',beneficiaryName:'Ahmed Bakr',country:'Bangladesh',beneficiariesCount:200,beneficiaryStatus:'Bonne santé',amount:200,paymentMethod:'HelloAsso',visibility:'Public',status:'Construction',notes:'',date:'2024-09-08',files:[]}];trees=[{id:101,treeNumber:'2024-1844',donorFirstName:'LARIT',donorLastName:'Mahmoud',donorPhone:'+33 6 11 22 33 44',donorEmail:'',beneficiaryName:'BOUCHAREB Hicham, BOUAHOUALA Rachid',country:'Bangladesh',beneficiariesCount:50,treeQty:5,beneficiaryStatus:'Bonne santé',amount:100,paymentMethod:'Espèces',visibility:'Public',status:'Terminé',notes:'',date:'2024-06-16',files:[]},{id:102,treeNumber:'2024-1845',donorFirstName:'Ahmed',donorLastName:'Ben',donorPhone:'+33 7 55 66 77 88',donorEmail:'ahmed@gmail.com',beneficiaryName:'Famille Ben',country:'Niger',beneficiariesCount:30,treeQty:3,beneficiaryStatus:'Bonne santé',amount:60,paymentMethod:'Virement',visibility:'Public',status:'Nouveau',notes:'',date:'2024-06-15',files:[]}];donors=[{id:1,firstName:'Mohamed',lastName:'Ali',phone:'+33 6 12 34 56 78',email:'mohamed@gmail.com',wells:1,trees:0,total:150,lastDate:'2024-05-19'},{id:2,firstName:'Fatima',lastName:'Hassan',phone:'+33 7 98 76 54 32',email:'fatima@gmail.com',wells:1,trees:0,total:200,lastDate:'2024-09-08'},{id:3,firstName:'LARIT',lastName:'Mahmoud',phone:'+33 6 11 22 33 44',email:'',wells:0,trees:1,total:100,lastDate:'2024-06-16'}];saveData();}}
 function saveData(){localStorage.setItem('wells_neuya',JSON.stringify(wells));localStorage.setItem('trees_neuya',JSON.stringify(trees));localStorage.setItem('donors_neuya',JSON.stringify(donors));localStorage.setItem('invoices_neuya',JSON.stringify(invoices));localStorage.setItem('employees_neuya',JSON.stringify(employees));localStorage.setItem('leaves_neuya',JSON.stringify(leaves));localStorage.setItem('contacts_neuya',JSON.stringify(contacts));localStorage.setItem('neya_initialized','1');if(typeof driveAutoBackupTrigger==='function'){try{driveAutoBackupTrigger();}catch(e){}}}
-function login(e){e.preventDefault();const em=document.getElementById('loginEmail').value,pw=document.getElementById('loginPassword').value;if(em==='admin@neya.org'&&pw==='admin123'){document.getElementById('loginScreen').classList.add('hidden');document.getElementById('mainApp').classList.remove('hidden');loadDemoData();showPage('dashboard');}else{alert('Identifiants incorrects');}}
+/* Mot de passe : jamais stocké en clair — empreinte SHA-256, modifiable via ⚙ et synchronisée entre postes */
+const NEYA_DEFAULT_PW_HASH='240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';
+window.neyaAuthHash=function(){try{const a=JSON.parse(localStorage.getItem('neya_auth')||'null');if(a&&a.hash)return a.hash;}catch(e){}return NEYA_DEFAULT_PW_HASH;};
+async function login(e){e.preventDefault();const em=document.getElementById('loginEmail').value,pw=document.getElementById('loginPassword').value;const h=await window.neyaHashPw(pw);if(em==='admin@neya.org'&&h===window.neyaAuthHash()){document.getElementById('loginScreen').classList.add('hidden');document.getElementById('mainApp').classList.remove('hidden');loadDemoData();showPage('dashboard');}else{alert('Identifiants incorrects');}}
 function logout(){document.getElementById('mainApp').classList.add('hidden');document.getElementById('loginScreen').classList.remove('hidden');}
 function showPage(p){document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden'));const page=document.getElementById('page-'+p);if(!page)return;page.classList.remove('hidden');document.querySelectorAll('.neu-sidebar-item').forEach(i=>i.classList.remove('active'));const ev=window.event;if(ev&&ev.currentTarget&&ev.currentTarget.classList&&ev.currentTarget.classList.contains('neu-sidebar-item')){ev.currentTarget.classList.add('active');}else{const nav=[...document.querySelectorAll('.neu-sidebar-item')].find(btn=>(btn.getAttribute('onclick')||'').includes("showPage('"+p+"')"));nav?.classList.add('active');}if(p==='dashboard')updateDashboard();if(p==='aiMarketing')neyaUpdateAiDashboard();if(p==='wells')updateWellsTable();if(p==='trees')updateTreesTable();if(p==='donors')updateDonorsTable();if(p==='posters')updatePosterSelect();if(p==='reports')updateReports();if(p==='tableau'){tableauSyncNeyaDonations();tableauShowSheet(0);}if(p==='whatsapp')waInit();if(p==='factures')updateFacturesTable();if(p==='conges')updateConges();if(p==='contacts')updateContactsTable();if(p==='newDonation')setTimeout(function(){if(typeof initSignature==='function'){initSignature();window.dispatchEvent(new Event('resize'));}},60);}
 let neyaAiCurrentChannel='facebook';
