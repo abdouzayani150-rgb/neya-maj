@@ -212,6 +212,29 @@ body {
   background: rgba(46, 125, 50, 0.05);
 }
 
+/* ===== Relief 3D des tableaux (pour qu'ils ne paraissent plus plats) ===== */
+/* En-tête : barre en relief au lieu d'un aplat */
+.neu-card table thead tr,
+.neu-card table .neu-table-header {
+  background: linear-gradient(145deg, #cbe8cb, #eef9ee);
+  box-shadow: 5px 5px 11px var(--shadow-dark), -5px -5px 11px var(--shadow-light);
+}
+.neu-card table thead th { color: #256d2a; font-weight: 800; }
+/* Lignes = petites cartes neumorphiques flottantes */
+.neu-card table { border-collapse: separate; border-spacing: 0 9px; }
+.neu-card table tbody tr {
+  background: var(--bg);
+  box-shadow: 4px 4px 9px var(--shadow-dark), -4px -4px 9px var(--shadow-light);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.neu-card table tbody tr:hover {
+  transform: translateY(-2px);
+  box-shadow: 7px 7px 15px var(--shadow-dark), -7px -7px 15px var(--shadow-light);
+}
+.neu-card table tbody td:first-child { border-radius: 14px 0 0 14px; }
+.neu-card table tbody td:last-child  { border-radius: 0 14px 14px 0; }
+.neu-card table tbody td { border-bottom: none !important; }
+
 .neu-select {
   appearance: none;
   background: var(--bg);
@@ -3116,7 +3139,7 @@ Un puits = une aumône continue (sadaqa jariya) ✨
 </div>
 
 <!-- ═══════ SYNCHRONISATION MULTI-POSTES (données partagées entre ordinateurs) ═══════ -->
-<!-- NEYA_UI_BUILD:6 -->
+<!-- NEYA_UI_BUILD:7 -->
 <script>
 (function(){
   // Adresse du serveur central. Vide = ce poste EST le serveur (même origine).
