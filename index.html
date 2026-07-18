@@ -1157,18 +1157,23 @@ i.fa-whatsapp{
 
     <form id="loginForm" class="space-y-5">
       <div>
-        <label class="block text-sm font-semibold mb-2 text-gray-600">Email</label>
-        <input type="email" id="loginEmail" class="neu-input" value="admin@neya.org">
+        <label class="block text-sm font-semibold mb-2 text-gray-600">Utilisateur</label>
+        <select id="loginUser" class="neu-input">
+          <option value="Mustapha">Mustapha</option>
+          <option value="Naima">Naima</option>
+          <option value="Khadîdja">Khadîdja</option>
+          <option value="communication">communication</option>
+        </select>
       </div>
       <div>
         <label class="block text-sm font-semibold mb-2 text-gray-600">Mot de passe</label>
-        <input type="password" id="loginPassword" class="neu-input" value="admin123">
+        <input type="password" id="loginPassword" class="neu-input" placeholder="••••••••" autocomplete="current-password">
       </div>
       <button type="submit" class="neu-btn w-full py-3 font-bold text-lg">
         <i class="fas fa-sign-in-alt mr-2 icon-glow-yellow"></i> Connexion
       </button>
     </form>
-    <p class="mt-6 text-xs text-gray-500">Test: admin@neya.org / admin123</p>
+    <p class="mt-6 text-xs text-gray-500">Mot de passe par défaut : <b>prénom+123</b> (ex. naima123) — à changer via ⚙</p>
   </div>
 </div>
 
@@ -1201,8 +1206,10 @@ i.fa-whatsapp{
             <i class="fas fa-user-shield icon-glow-purple"></i>
           </div>
           <select id="userName" class="neu-select text-sm font-bold" style="min-width:140px;background:transparent;box-shadow:none;padding:6px 10px;">
+            <option value="Mustapha">Mustapha</option>
             <option value="Naima">Naima</option>
-            <option value="Khedidja">Khedidja</option>
+            <option value="Khadîdja">Khadîdja</option>
+            <option value="communication">communication</option>
           </select>
         </div>
         <button onclick="logout()" class="neu-icon-btn">
@@ -3139,13 +3146,13 @@ Un puits = une aumône continue (sadaqa jariya) ✨
 </div>
 
 <!-- ═══════ SYNCHRONISATION MULTI-POSTES (données partagées entre ordinateurs) ═══════ -->
-<!-- NEYA_UI_BUILD:7 -->
+<!-- NEYA_UI_BUILD:8 -->
 <script>
 (function(){
   // Adresse du serveur central. Vide = ce poste EST le serveur (même origine).
   function base(){ try{ return (localStorage.getItem('neya_sync_base')||'').replace(/\/$/,''); }catch(e){ return ''; } }
   // Clés (buckets) synchronisées. Le reste (config WhatsApp, adresse serveur…) reste local.
-  var KEYS = ['wells_neuya','trees_neuya','donors_neuya','invoices_neuya','employees_neuya','leaves_neuya','contacts_neuya','neya_ai_marketing_campaigns','wa_archives_neuya','neya_initialized','neya_auth'];
+  var KEYS = ['wells_neuya','trees_neuya','donors_neuya','invoices_neuya','employees_neuya','leaves_neuya','contacts_neuya','neya_ai_marketing_campaigns','wa_archives_neuya','neya_initialized','neya_auth','neya_users'];
   // Clé de sécurité réseau (locale à ce poste, fournie par le poste serveur)
   function syncKey(){ try{ return localStorage.getItem('neya_sync_key')||''; }catch(e){ return ''; } }
   window.NEYA_SYNC_KEYS = KEYS;
@@ -3235,7 +3242,7 @@ Un puits = une aumône continue (sadaqa jariya) ✨
       + '<input id="neyaKeyInput" type="text" spellcheck="false" placeholder="مفتاح الأمان" style="'+inpStyle+'" />'
       + '<div id="neyaLocalKey" style="font-size:11.5px;color:#0f766e;word-break:break-all;background:#f2f8f5;border-radius:8px;padding:8px;display:none"></div>'
       + '<hr style="margin:16px 0;border:none;border-top:1px solid #e5efe9">'
-      + '<div style="font-size:14px;font-weight:bold;margin-bottom:6px">🔒 تغيير كلمة السر (كتطبّق على جميع الأجهزة)</div>'
+      + '<div style="font-size:14px;font-weight:bold;margin-bottom:6px">🔒 تغيير كلمة السر ديال المستخدم الحالي (كتطبّق على جميع الأجهزة)</div>'
       + '<input id="neyaPwCur" type="password" placeholder="كلمة السر الحالية" style="'+inpStyle+';direction:rtl;text-align:right" />'
       + '<input id="neyaPwNew" type="password" placeholder="كلمة السر الجديدة (8 حروف أو أكثر)" style="'+inpStyle+';direction:rtl;text-align:right" />'
       + '<button id="neyaPwBtn" style="width:100%;background:#0f766e;color:#fff;border:none;padding:10px;border-radius:10px;font-size:14px;font-weight:bold;cursor:pointer">تغيير كلمة السر</button>'
@@ -3261,13 +3268,17 @@ Un puits = une aumône continue (sadaqa jariya) ✨
     document.getElementById('neyaPwBtn').onclick = function(){
       var cur = document.getElementById('neyaPwCur').value;
       var nw  = document.getElementById('neyaPwNew').value;
-      if (nw.length < 8){ alert('كلمة السر الجديدة خاصها 8 حروف على الأقل'); return; }
+      if (nw.length < 6){ alert('كلمة السر الجديدة خاصها 6 حروف على الأقل'); return; }
+      var uname = localStorage.getItem('neya_current_user') || '';
+      if (!uname){ alert('خاصك تكون داخل بحساب باش تبدّل كلمة السر'); return; }
+      var users = (window.neyaLoadUsers ? window.neyaLoadUsers() : []);
       window.neyaHashPw(cur).then(function(h){
-        var stored = window.neyaAuthHash ? window.neyaAuthHash() : '';
-        if (h !== stored){ alert('كلمة السر الحالية غير صحيحة'); return; }
+        var u = users.find(function(x){ return x.name === uname; });
+        if (!u || u.hash !== h){ alert('كلمة السر الحالية غير صحيحة'); return; }
         window.neyaHashPw(nw).then(function(nh){
-          localStorage.setItem('neya_auth', JSON.stringify({ hash: nh })); // synchronisée partout
-          alert('✅ تبدّلات كلمة السر فجميع الأجهزة');
+          u.hash = nh;
+          window.neyaSaveUsers(users); // synchronisée sur tous les postes
+          alert('✅ تبدّلات كلمة السر ديال ' + uname + ' فجميع الأجهزة');
           close();
         });
       });
@@ -3300,10 +3311,33 @@ function t(k,p){return tr.fr[p]?.[k]||k;}
 function openDonationTable(){showPage('tableau');}
 function loadDemoData(){if(wells.length===0 && !localStorage.getItem('neya_initialized')){wells=[{id:1,wellNumber:'2024-096',donorFirstName:'Mohamed',donorLastName:'Ali',donorPhone:'+33 6 12 34 56 78',donorEmail:'mohamed@gmail.com',beneficiaryName:'Al-Haj Abdallah',country:'Sénégal',beneficiariesCount:150,beneficiaryStatus:'Décédé',amount:150,paymentMethod:'Virement',visibility:'Public',status:'Conception',notes:'',date:'2024-05-19',files:[]},{id:2,wellNumber:'2024-095',donorFirstName:'Fatima',donorLastName:'Hassan',donorPhone:'+33 7 98 76 54 32',donorEmail:'fatima@gmail.com',beneficiaryName:'Ahmed Bakr',country:'Bangladesh',beneficiariesCount:200,beneficiaryStatus:'Bonne santé',amount:200,paymentMethod:'HelloAsso',visibility:'Public',status:'Construction',notes:'',date:'2024-09-08',files:[]}];trees=[{id:101,treeNumber:'2024-1844',donorFirstName:'LARIT',donorLastName:'Mahmoud',donorPhone:'+33 6 11 22 33 44',donorEmail:'',beneficiaryName:'BOUCHAREB Hicham, BOUAHOUALA Rachid',country:'Bangladesh',beneficiariesCount:50,treeQty:5,beneficiaryStatus:'Bonne santé',amount:100,paymentMethod:'Espèces',visibility:'Public',status:'Terminé',notes:'',date:'2024-06-16',files:[]},{id:102,treeNumber:'2024-1845',donorFirstName:'Ahmed',donorLastName:'Ben',donorPhone:'+33 7 55 66 77 88',donorEmail:'ahmed@gmail.com',beneficiaryName:'Famille Ben',country:'Niger',beneficiariesCount:30,treeQty:3,beneficiaryStatus:'Bonne santé',amount:60,paymentMethod:'Virement',visibility:'Public',status:'Nouveau',notes:'',date:'2024-06-15',files:[]}];donors=[{id:1,firstName:'Mohamed',lastName:'Ali',phone:'+33 6 12 34 56 78',email:'mohamed@gmail.com',wells:1,trees:0,total:150,lastDate:'2024-05-19'},{id:2,firstName:'Fatima',lastName:'Hassan',phone:'+33 7 98 76 54 32',email:'fatima@gmail.com',wells:1,trees:0,total:200,lastDate:'2024-09-08'},{id:3,firstName:'LARIT',lastName:'Mahmoud',phone:'+33 6 11 22 33 44',email:'',wells:0,trees:1,total:100,lastDate:'2024-06-16'}];saveData();}}
 function saveData(){localStorage.setItem('wells_neuya',JSON.stringify(wells));localStorage.setItem('trees_neuya',JSON.stringify(trees));localStorage.setItem('donors_neuya',JSON.stringify(donors));localStorage.setItem('invoices_neuya',JSON.stringify(invoices));localStorage.setItem('employees_neuya',JSON.stringify(employees));localStorage.setItem('leaves_neuya',JSON.stringify(leaves));localStorage.setItem('contacts_neuya',JSON.stringify(contacts));localStorage.setItem('neya_initialized','1');if(typeof driveAutoBackupTrigger==='function'){try{driveAutoBackupTrigger();}catch(e){}}}
-/* Mot de passe : jamais stocké en clair — empreinte SHA-256, modifiable via ⚙ et synchronisée entre postes */
-const NEYA_DEFAULT_PW_HASH='240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';
-window.neyaAuthHash=function(){try{const a=JSON.parse(localStorage.getItem('neya_auth')||'null');if(a&&a.hash)return a.hash;}catch(e){}return NEYA_DEFAULT_PW_HASH;};
-async function login(e){e.preventDefault();const em=document.getElementById('loginEmail').value,pw=document.getElementById('loginPassword').value;const h=await window.neyaHashPw(pw);if(em==='admin@neya.org'&&h===window.neyaAuthHash()){document.getElementById('loginScreen').classList.add('hidden');document.getElementById('mainApp').classList.remove('hidden');loadDemoData();showPage('dashboard');}else{alert('Identifiants incorrects');}}
+/* ── Multi-utilisateurs : 4 comptes, chacun son mot de passe (empreinte SHA-256, jamais en clair) ── */
+const NEYA_DEFAULT_USERS=[
+  {name:'Mustapha',hash:'ee2997c33a39ad23037dfa155b39d6be239e21cfb2fde2b7479d6e1444828ca8'},
+  {name:'Naima',hash:'6cf43a822cb44376ffa09d807bf6f0f63e85ef653a47f1a340d3f8d218434cf5'},
+  {name:'Khadîdja',hash:'9ca48d97ea1d11cfee9fd954205ac451f24004564e6b1d6cc226a7ceea33508f'},
+  {name:'communication',hash:'d7a760a7852dceaf17cf479cc4ce95aa2863e4ec18a105e81bec2f8278ece0cb'}
+];
+window.neyaLoadUsers=function(){try{const u=JSON.parse(localStorage.getItem('neya_users')||'null');if(Array.isArray(u)&&u.length)return u;}catch(e){}return NEYA_DEFAULT_USERS.map(x=>({name:x.name,hash:x.hash}));};
+window.neyaSaveUsers=function(list){localStorage.setItem('neya_users',JSON.stringify(list));};
+window.neyaCurrentUser=function(){return localStorage.getItem('neya_current_user')||'';};
+// Sème les comptes par défaut au premier lancement (pour que le changement de mot de passe fonctionne)
+try{ if(!localStorage.getItem('neya_users')) window.neyaSaveUsers(window.neyaLoadUsers()); }catch(e){}
+async function login(e){
+  if(e&&e.preventDefault)e.preventDefault();
+  const name=document.getElementById('loginUser').value;
+  const pw=document.getElementById('loginPassword').value;
+  const h=await window.neyaHashPw(pw);
+  const u=window.neyaLoadUsers().find(x=>x.name===name);
+  if(u&&u.hash===h){
+    localStorage.setItem('neya_current_user',name);
+    const sel=document.getElementById('userName');
+    if(sel){ if(![...sel.options].some(o=>o.value===name)) sel.add(new Option(name,name)); sel.value=name; }
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('hidden');
+    loadDemoData();showPage('dashboard');
+  }else{ alert('Mot de passe incorrect'); }
+}
 function logout(){document.getElementById('mainApp').classList.add('hidden');document.getElementById('loginScreen').classList.remove('hidden');}
 function showPage(p){document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden'));const page=document.getElementById('page-'+p);if(!page)return;page.classList.remove('hidden');document.querySelectorAll('.neu-sidebar-item').forEach(i=>i.classList.remove('active'));const ev=window.event;if(ev&&ev.currentTarget&&ev.currentTarget.classList&&ev.currentTarget.classList.contains('neu-sidebar-item')){ev.currentTarget.classList.add('active');}else{const nav=[...document.querySelectorAll('.neu-sidebar-item')].find(btn=>(btn.getAttribute('onclick')||'').includes("showPage('"+p+"')"));nav?.classList.add('active');}if(p==='dashboard')updateDashboard();if(p==='aiMarketing')neyaUpdateAiDashboard();if(p==='wells')updateWellsTable();if(p==='trees')updateTreesTable();if(p==='donors')updateDonorsTable();if(p==='posters')updatePosterSelect();if(p==='reports')updateReports();if(p==='tableau'){tableauSyncNeyaDonations();tableauShowSheet(0);}if(p==='whatsapp')waInit();if(p==='factures')updateFacturesTable();if(p==='conges')updateConges();if(p==='contacts')updateContactsTable();if(p==='newDonation')setTimeout(function(){if(typeof initSignature==='function'){initSignature();window.dispatchEvent(new Event('resize'));}},60);}
 let neyaAiCurrentChannel='facebook';
