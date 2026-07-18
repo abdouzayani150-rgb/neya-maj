@@ -1161,7 +1161,7 @@ i.fa-whatsapp{
         <select id="loginUser" class="neu-input">
           <option value="Mustapha">Mustapha</option>
           <option value="Naima">Naima</option>
-          <option value="Khadîdja">Khadîdja</option>
+          <option value="Khedidja">Khedidja</option>
           <option value="communication">communication</option>
         </select>
       </div>
@@ -1208,7 +1208,7 @@ i.fa-whatsapp{
           <select id="userName" class="neu-select text-sm font-bold" style="min-width:140px;background:transparent;box-shadow:none;padding:6px 10px;">
             <option value="Mustapha">Mustapha</option>
             <option value="Naima">Naima</option>
-            <option value="Khadîdja">Khadîdja</option>
+            <option value="Khedidja">Khedidja</option>
             <option value="communication">communication</option>
           </select>
         </div>
@@ -3146,7 +3146,7 @@ Un puits = une aumône continue (sadaqa jariya) ✨
 </div>
 
 <!-- ═══════ SYNCHRONISATION MULTI-POSTES (données partagées entre ordinateurs) ═══════ -->
-<!-- NEYA_UI_BUILD:8 -->
+<!-- NEYA_UI_BUILD:9 -->
 <script>
 (function(){
   // Adresse du serveur central. Vide = ce poste EST le serveur (même origine).
@@ -3315,10 +3315,19 @@ function saveData(){localStorage.setItem('wells_neuya',JSON.stringify(wells));lo
 const NEYA_DEFAULT_USERS=[
   {name:'Mustapha',hash:'ee2997c33a39ad23037dfa155b39d6be239e21cfb2fde2b7479d6e1444828ca8'},
   {name:'Naima',hash:'6cf43a822cb44376ffa09d807bf6f0f63e85ef653a47f1a340d3f8d218434cf5'},
-  {name:'Khadîdja',hash:'9ca48d97ea1d11cfee9fd954205ac451f24004564e6b1d6cc226a7ceea33508f'},
+  {name:'Khedidja',hash:'3a0e89a9a4de8646a45c57102bd02e0074f9047d776cf322c9bab4b5946f28a3'},
   {name:'communication',hash:'d7a760a7852dceaf17cf479cc4ce95aa2863e4ec18a105e81bec2f8278ece0cb'}
 ];
-window.neyaLoadUsers=function(){try{const u=JSON.parse(localStorage.getItem('neya_users')||'null');if(Array.isArray(u)&&u.length)return u;}catch(e){}return NEYA_DEFAULT_USERS.map(x=>({name:x.name,hash:x.hash}));};
+window.neyaLoadUsers=function(){
+  var list=null;
+  try{const u=JSON.parse(localStorage.getItem('neya_users')||'null');if(Array.isArray(u)&&u.length)list=u;}catch(e){}
+  if(!list)list=NEYA_DEFAULT_USERS.map(x=>({name:x.name,hash:x.hash}));
+  // Migration : ancien nom "Khadîdja" -> "Khedidja"
+  var changed=false;
+  list.forEach(function(u){ if(u.name==='Khadîdja'){ u.name='Khedidja'; if(u.hash==='9ca48d97ea1d11cfee9fd954205ac451f24004564e6b1d6cc226a7ceea33508f') u.hash='3a0e89a9a4de8646a45c57102bd02e0074f9047d776cf322c9bab4b5946f28a3'; changed=true; } });
+  if(changed){try{localStorage.setItem('neya_users',JSON.stringify(list));}catch(e){}}
+  return list;
+};
 window.neyaSaveUsers=function(list){localStorage.setItem('neya_users',JSON.stringify(list));};
 window.neyaCurrentUser=function(){return localStorage.getItem('neya_current_user')||'';};
 // Sème les comptes par défaut au premier lancement (pour que le changement de mot de passe fonctionne)
