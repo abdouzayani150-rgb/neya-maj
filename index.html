@@ -3171,7 +3171,7 @@ Un puits = une aumône continue (sadaqa jariya) ✨
 </div>
 
 <!-- ═══════ SYNCHRONISATION MULTI-POSTES (données partagées entre ordinateurs) ═══════ -->
-<!-- NEYA_UI_BUILD:12 -->
+<!-- NEYA_UI_BUILD:13 -->
 <script>
 (function(){
   // Adresse du serveur central. Vide = ce poste EST le serveur (même origine).
@@ -3357,6 +3357,15 @@ window.neyaSaveUsers=function(list){localStorage.setItem('neya_users',JSON.strin
 window.neyaCurrentUser=function(){return localStorage.getItem('neya_current_user')||'';};
 // Sème les comptes par défaut au premier lancement (pour que le changement de mot de passe fonctionne)
 try{ if(!localStorage.getItem('neya_users')) window.neyaSaveUsers(window.neyaLoadUsers()); }catch(e){}
+/* ── Droits d'accès : pages interdites par utilisateur ── */
+const NEYA_PAGE_RESTRICTIONS={ 'Khedidja':['conges'] };
+window.neyaCanAccess=function(page){const r=NEYA_PAGE_RESTRICTIONS[window.neyaCurrentUser()]||[];return r.indexOf(page)===-1;};
+window.neyaApplyPermissions=function(){
+  document.querySelectorAll('.neu-sidebar-item').forEach(function(btn){
+    const m=(btn.getAttribute('onclick')||'').match(/showPage\('([^']+)'\)/);
+    if(m) btn.style.display = window.neyaCanAccess(m[1]) ? '' : 'none';
+  });
+};
 async function login(e){
   if(e&&e.preventDefault)e.preventDefault();
   const name=document.getElementById('loginUser').value;
@@ -3369,11 +3378,12 @@ async function login(e){
     if(sel){ if(![...sel.options].some(o=>o.value===name)) sel.add(new Option(name,name)); sel.value=name; }
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
+    window.neyaApplyPermissions();
     loadDemoData();showPage('dashboard');
   }else{ alert('Mot de passe incorrect'); }
 }
 function logout(){document.getElementById('mainApp').classList.add('hidden');document.getElementById('loginScreen').classList.remove('hidden');}
-function showPage(p){document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden'));const page=document.getElementById('page-'+p);if(!page)return;page.classList.remove('hidden');document.querySelectorAll('.neu-sidebar-item').forEach(i=>i.classList.remove('active'));const ev=window.event;if(ev&&ev.currentTarget&&ev.currentTarget.classList&&ev.currentTarget.classList.contains('neu-sidebar-item')){ev.currentTarget.classList.add('active');}else{const nav=[...document.querySelectorAll('.neu-sidebar-item')].find(btn=>(btn.getAttribute('onclick')||'').includes("showPage('"+p+"')"));nav?.classList.add('active');}if(p==='dashboard')updateDashboard();if(p==='aiMarketing')neyaUpdateAiDashboard();if(p==='wells')updateWellsTable();if(p==='trees')updateTreesTable();if(p==='donors')updateDonorsTable();if(p==='posters')updatePosterSelect();if(p==='reports')updateReports();if(p==='tableau'){tableauSyncNeyaDonations();tableauShowSheet(0);}if(p==='whatsapp')waInit();if(p==='factures')updateFacturesTable();if(p==='conges')updateConges();if(p==='contacts')updateContactsTable();if(p==='newDonation')setTimeout(function(){if(typeof initSignature==='function'){initSignature();window.dispatchEvent(new Event('resize'));}},60);}
+function showPage(p){if(window.neyaCanAccess&&!window.neyaCanAccess(p)){alert('⛔ Accès non autorisé pour cet utilisateur');return;}document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden'));const page=document.getElementById('page-'+p);if(!page)return;page.classList.remove('hidden');document.querySelectorAll('.neu-sidebar-item').forEach(i=>i.classList.remove('active'));const ev=window.event;if(ev&&ev.currentTarget&&ev.currentTarget.classList&&ev.currentTarget.classList.contains('neu-sidebar-item')){ev.currentTarget.classList.add('active');}else{const nav=[...document.querySelectorAll('.neu-sidebar-item')].find(btn=>(btn.getAttribute('onclick')||'').includes("showPage('"+p+"')"));nav?.classList.add('active');}if(p==='dashboard')updateDashboard();if(p==='aiMarketing')neyaUpdateAiDashboard();if(p==='wells')updateWellsTable();if(p==='trees')updateTreesTable();if(p==='donors')updateDonorsTable();if(p==='posters')updatePosterSelect();if(p==='reports')updateReports();if(p==='tableau'){tableauSyncNeyaDonations();tableauShowSheet(0);}if(p==='whatsapp')waInit();if(p==='factures')updateFacturesTable();if(p==='conges')updateConges();if(p==='contacts')updateContactsTable();if(p==='newDonation')setTimeout(function(){if(typeof initSignature==='function'){initSignature();window.dispatchEvent(new Event('resize'));}},60);}
 let neyaAiCurrentChannel='facebook';
 let neyaAiOutputs={};
 let neyaAiLastCampaign=null;
