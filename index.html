@@ -258,6 +258,16 @@ body {
   .neya-logo-badge { height: 140px; border-radius: 30px; padding: 14px 18px; }
 }
 
+/* Sélecteur d'utilisateur verrouillé (défini par la connexion) : lisible, pas grisé */
+#userName:disabled {
+  opacity: 1;
+  color: var(--primary);
+  -webkit-text-fill-color: var(--primary);
+  cursor: default;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
 .neu-select {
   appearance: none;
   background: var(--bg);
@@ -1230,7 +1240,7 @@ i.fa-whatsapp{
           <div class="neu-icon-btn w-10 h-10">
             <i class="fas fa-user-shield icon-glow-purple"></i>
           </div>
-          <select id="userName" class="neu-select text-sm font-bold" style="min-width:140px;background:transparent;box-shadow:none;padding:6px 10px;">
+          <select id="userName" class="neu-select text-sm font-bold" disabled title="L'utilisateur est défini par la connexion — déconnecte-toi pour changer" style="min-width:140px;background:transparent;box-shadow:none;padding:6px 10px;">
             <option value="Mustapha">Mustapha</option>
             <option value="Naima">Naima</option>
             <option value="Khedidja">Khedidja</option>
@@ -3171,7 +3181,7 @@ Un puits = une aumône continue (sadaqa jariya) ✨
 </div>
 
 <!-- ═══════ SYNCHRONISATION MULTI-POSTES (données partagées entre ordinateurs) ═══════ -->
-<!-- NEYA_UI_BUILD:14 -->
+<!-- NEYA_UI_BUILD:15 -->
 <script>
 (function(){
   // Adresse du serveur central. Vide = ce poste EST le serveur (même origine).
