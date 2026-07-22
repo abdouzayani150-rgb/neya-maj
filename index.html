@@ -3181,7 +3181,7 @@ Un puits = une aumône continue (sadaqa jariya) ✨
 </div>
 
 <!-- ═══════ SYNCHRONISATION MULTI-POSTES (données partagées entre ordinateurs) ═══════ -->
-<!-- NEYA_UI_BUILD:16 -->
+<!-- NEYA_UI_BUILD:17 -->
 <script>
 (function(){
   // Adresse du serveur central. Vide = ce poste EST le serveur (même origine).
@@ -5645,6 +5645,21 @@ function deleteLeave(id){
 function setLeaveStatus(id,status){
   const l=leaves.find(x=>x.id===id); if(!l)return; l.status=status; congesPersist(); updateConges();
 }
+/* Couleur distincte et stable par salarié (badge dans le tableau + accent sur sa carte) */
+const EMP_COLORS=[
+  {bg:'#e0edff',fg:'#1d4ed8'},  /* bleu   */
+  {bg:'#fce7f3',fg:'#be185d'},  /* rose   */
+  {bg:'#dcfce7',fg:'#15803d'},  /* vert   */
+  {bg:'#fef3c7',fg:'#b45309'},  /* ambre  */
+  {bg:'#ede9fe',fg:'#6d28d9'},  /* violet */
+  {bg:'#cffafe',fg:'#0e7490'},  /* cyan   */
+  {bg:'#ffedd5',fg:'#c2410c'},  /* orange */
+  {bg:'#f1f5f9',fg:'#334155'}   /* ardoise*/
+];
+function empColor(id){
+  const idx=employees.findIndex(e=>e.id===id);
+  return EMP_COLORS[(idx>=0?idx:0)%EMP_COLORS.length];
+}
 function updateConges(){
   document.getElementById('congesCount').textContent=employees.length+' salarié(s) · '+leaves.length+' demande(s)';
   // Cartes soldes
@@ -5655,9 +5670,10 @@ function updateConges(){
     grid.innerHTML=employees.map(e=>{
       const acquis=e.annualDays||0, pris=empTaken(e.id), reste=acquis-pris;
       const col=reste<0?'#dc2626':(reste<5?'#d97706':'#059669');
-      return `<div class="neu-card" style="padding:16px;">
+      const c=empColor(e.id);
+      return `<div class="neu-card" style="padding:16px;border-left:6px solid ${c.fg};">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-          <div><div style="font-weight:800;color:#0369a1;">${e.name}</div><div style="font-size:.74rem;color:var(--text-light);">${e.role||'—'}</div></div>
+          <div><div style="font-weight:800;color:${c.fg};">${e.name}</div><div style="font-size:.74rem;color:var(--text-light);">${e.role||'—'}</div></div>
           <div style="white-space:nowrap;">
             <button onclick="openEmployeeModal(${e.id})" title="Modifier" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border:none;border-radius:7px;padding:4px 8px;font-size:.72rem;cursor:pointer;">✏️</button>
             <button onclick="deleteEmployee(${e.id})" title="Supprimer" style="background:linear-gradient(135deg,#ef5350,#c62828);color:#fff;border:none;border-radius:7px;padding:4px 8px;font-size:.72rem;cursor:pointer;">🗑️</button>
@@ -5676,8 +5692,8 @@ function updateConges(){
   const list=[...leaves].sort((a,b)=>new Date(b.startDate)-new Date(a.startDate));
   const tb=document.getElementById('leavesTableBody');
   if(!list.length){ tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-light);">Aucune demande de congé</td></tr>'; return; }
-  tb.innerHTML=list.map(l=>`<tr style="border-bottom:1px solid #e2f2fb;" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">
-    <td style="padding:10px 13px;font-weight:600;font-size:.83rem;">${empName(l.employeeId)}</td>
+  tb.innerHTML=list.map(l=>{const c=empColor(l.employeeId);return `<tr style="border-bottom:1px solid #e2f2fb;" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">
+    <td style="padding:10px 13px;font-size:.83rem;border-left:4px solid ${c.fg};"><span style="display:inline-block;padding:3px 11px;border-radius:12px;font-weight:700;background:${c.bg};color:${c.fg};">${empName(l.employeeId)}</span></td>
     <td style="padding:10px 13px;font-size:.82rem;">${l.type}</td>
     <td style="padding:10px 13px;font-size:.82rem;">${l.startDate}</td>
     <td style="padding:10px 13px;font-size:.82rem;">${l.endDate}</td>
@@ -5688,7 +5704,7 @@ function updateConges(){
       <button onclick="openLeaveModal(${l.id})" title="Modifier" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border:none;border-radius:7px;padding:4px 8px;font-size:.72rem;cursor:pointer;margin-right:3px;">✏️</button>
       <button onclick="deleteLeave(${l.id})" title="Supprimer" style="background:linear-gradient(135deg,#ef5350,#c62828);color:#fff;border:none;border-radius:7px;padding:4px 8px;font-size:.72rem;cursor:pointer;">🗑️</button>
     </td>
-  </tr>`).join('');
+  </tr>`;}).join('');
 }
 
 // ─── FACTURES ───────────────────────────────────────────────────────────────
