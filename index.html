@@ -3171,7 +3171,7 @@ Un puits = une aumône continue (sadaqa jariya) ✨
 </div>
 
 <!-- ═══════ SYNCHRONISATION MULTI-POSTES (données partagées entre ordinateurs) ═══════ -->
-<!-- NEYA_UI_BUILD:13 -->
+<!-- NEYA_UI_BUILD:14 -->
 <script>
 (function(){
   // Adresse du serveur central. Vide = ce poste EST le serveur (même origine).
@@ -3358,7 +3358,7 @@ window.neyaCurrentUser=function(){return localStorage.getItem('neya_current_user
 // Sème les comptes par défaut au premier lancement (pour que le changement de mot de passe fonctionne)
 try{ if(!localStorage.getItem('neya_users')) window.neyaSaveUsers(window.neyaLoadUsers()); }catch(e){}
 /* ── Droits d'accès : pages interdites par utilisateur ── */
-const NEYA_PAGE_RESTRICTIONS={ 'Khedidja':['conges'] };
+const NEYA_PAGE_RESTRICTIONS={ 'Khedidja':['conges','aiMarketing','contacts','reports','settings'] };
 window.neyaCanAccess=function(page){const r=NEYA_PAGE_RESTRICTIONS[window.neyaCurrentUser()]||[];return r.indexOf(page)===-1;};
 window.neyaApplyPermissions=function(){
   document.querySelectorAll('.neu-sidebar-item').forEach(function(btn){
