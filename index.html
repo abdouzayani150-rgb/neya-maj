@@ -3181,7 +3181,7 @@ Un puits = une aumône continue (sadaqa jariya) ✨
 </div>
 
 <!-- ═══════ SYNCHRONISATION MULTI-POSTES (données partagées entre ordinateurs) ═══════ -->
-<!-- NEYA_UI_BUILD:15 -->
+<!-- NEYA_UI_BUILD:16 -->
 <script>
 (function(){
   // Adresse du serveur central. Vide = ce poste EST le serveur (même origine).
@@ -3368,7 +3368,16 @@ window.neyaCurrentUser=function(){return localStorage.getItem('neya_current_user
 // Sème les comptes par défaut au premier lancement (pour que le changement de mot de passe fonctionne)
 try{ if(!localStorage.getItem('neya_users')) window.neyaSaveUsers(window.neyaLoadUsers()); }catch(e){}
 /* ── Droits d'accès : pages interdites par utilisateur ── */
-const NEYA_PAGE_RESTRICTIONS={ 'Khedidja':['conges','aiMarketing','contacts','reports','settings'] };
+const NEYA_PAGE_RESTRICTIONS={
+  'Khedidja':['conges','aiMarketing','contacts','reports','settings'],
+  'communication':['dashboard','newDonation','wells','trees','donors','contacts','reports','tableau','whatsapp','factures','conges','settings']
+};
+/* Première page autorisée pour l'utilisateur connecté (page d'accueil après connexion) */
+window.neyaHomePage=function(){
+  var order=['dashboard','aiMarketing','newDonation','wells','trees','donors','contacts','posters','reports','tableau','whatsapp','factures','conges','settings'];
+  for(var i=0;i<order.length;i++){ if(window.neyaCanAccess(order[i])) return order[i]; }
+  return 'dashboard';
+};
 window.neyaCanAccess=function(page){const r=NEYA_PAGE_RESTRICTIONS[window.neyaCurrentUser()]||[];return r.indexOf(page)===-1;};
 window.neyaApplyPermissions=function(){
   document.querySelectorAll('.neu-sidebar-item').forEach(function(btn){
@@ -3389,7 +3398,7 @@ async function login(e){
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
     window.neyaApplyPermissions();
-    loadDemoData();showPage('dashboard');
+    loadDemoData();showPage(window.neyaHomePage());
   }else{ alert('Mot de passe incorrect'); }
 }
 function logout(){document.getElementById('mainApp').classList.add('hidden');document.getElementById('loginScreen').classList.remove('hidden');}
